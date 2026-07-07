@@ -7,6 +7,7 @@ import { magicLinkEmailHtml, magicLinkEmailText } from "@/lib/auth-email";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db()),
+  trustHost: true,
   session: {
     strategy: "database",
     maxAge: 30 * 24 * 60 * 60,

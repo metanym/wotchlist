@@ -1,0 +1,140 @@
+import { db } from "@/lib/db";
+import type { TitleType } from "@prisma/client";
+
+const OMDB_BASE_URL = "https://www.omdbapi.com/";
+const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+
+export interface OmdbSearchResult {
+  imdbId: string;
+  title: string;
+  year: string;
+  type: TitleType;
+  posterUrl: string | null;
+}
+
+interface OmdbSearchResponse {
+  Response: "True" | "False";
+  Error?: string;
+  Search?: Array<{
+    Title: string;
+    Year: string;
+    imdbID: string;
+    Type: string;
+    Poster: string;
+  }>;
+}
+
+interface OmdbDetailResponse {
+  Response: "True" | "False";
+  Error?: string;
+  Title: string;
+  Year: string;
+  Type: string;
+  Poster: string;
+  Plot: string;
+  Genre: string;
+  Director: string;
+  Actors: string;
+  imdbRating: string;
+  totalSeasons?: string;
+  Ratings?: Array<{ Source: string; Value: string }>;
+}
+
+function toTitleType(omdbType: string): TitleType {
+  return omdbType === "series" ? "SERIES" : "MOVIE";
+}
+
+function omdbApiKey() {
+  const key = process.env.OMDB_API_KEY;
+  if (!key) {
+    throw new Error("OMDB_API_KEY is not configured");
+  }
+  return key;
+}
+
+export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
+  const url = new URL(OMDB_BASE_URL);
+  url.searchParams.set("apikey", omdbApiKey());
+  url.searchParams.set("s", query);
+
+  const res = await fetch(url, { next: { revalidate: 0 } });
+  const data: OmdbSearchResponse = await res.json();
+
+  if (data.Response === "False" || !data.Search) {
+    return [];
+  }
+
+  return data.Search.map((item) => ({
+    imdbId: item.imdbID,
+    title: item.Title,
+    year: item.Year,
+    type: toTitleType(item.Type),
+    posterUrl: item.Poster && item.Poster !== "N/A" ? item.Poster : null,
+  }));
+}
+
+async function fetchDetail(imdbId: string): Promise<OmdbDetailResponse | null> {
+  const url = new URL(OMDB_BASE_URL);
+  url.searchParams.set("apikey", omdbApiKey());
+  url.searchParams.set("i", imdbId);
+  url.searchParams.set("plot", "full");
+
+  const res = await fetch(url, { next: { revalidate: 0 } });
+  const data: OmdbDetailResponse = await res.json();
+  if (data.Response === "False") return null;
+  return data;
+}
+
+function rtScoreFrom(ratings: OmdbDetailResponse["Ratings"]) {
+  return ratings?.find((r) => r.Source === "Rotten Tomatoes")?.Value ?? null;
+}
+
+export async function upsertTitle(imdbId: string) {
+  const existing = await db().title.findUnique({ where: { imdbId } });
+
+  const isStale =
+    !existing?.metaFetchedAt ||
+    Date.now() - existing.metaFetchedAt.getTime() > STALE_AFTER_MS;
+
+  if (existing && !isStale) {
+    return existing;
+  }
+
+  const detail = await fetchDetail(imdbId);
+  if (!detail) {
+    if (existing) return existing;
+    throw new Error("Title not found on OMDB");
+  }
+
+  return db().title.upsert({
+    where: { imdbId },
+    create: {
+      imdbId,
+      title: detail.Title,
+      year: detail.Year,
+      type: toTitleType(detail.Type),
+      posterUrl: detail.Poster && detail.Poster !== "N/A" ? detail.Poster : null,
+      plot: detail.Plot !== "N/A" ? detail.Plot : null,
+      imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
+      rtScore: rtScoreFrom(detail.Ratings),
+      genre: detail.Genre !== "N/A" ? detail.Genre : null,
+      director: detail.Director !== "N/A" ? detail.Director : null,
+      actors: detail.Actors !== "N/A" ? detail.Actors : null,
+      totalSeasons: detail.totalSeasons,
+      metaFetchedAt: new Date(),
+    },
+    update: {
+      title: detail.Title,
+      year: detail.Year,
+      posterUrl: detail.Poster && detail.Poster !== "N/A" ? detail.Poster : null,
+      plot: detail.Plot !== "N/A" ? detail.Plot : null,
+      imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
+      rtScore: rtScoreFrom(detail.Ratings),
+      genre: detail.Genre !== "N/A" ? detail.Genre : null,
+      director: detail.Director !== "N/A" ? detail.Director : null,
+      actors: detail.Actors !== "N/A" ? detail.Actors : null,
+      totalSeasons: detail.totalSeasons,
+      metaFetchedAt: new Date(),
+    },
+  });
+}

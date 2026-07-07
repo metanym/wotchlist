@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String       @id @default(cuid())
+  email         String       @unique
+  emailVerified DateTime?
+  displayName   String?
+  createdAt     DateTime     @default(now())
+  lists         List[]
+  memberships   ListMember[]
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model List {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  type        ListType     @default(PERSONAL)
+  ownerId     String
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     ListMember[]
+  items       ListItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([ownerId])
+}
+
+enum ListType {
+  PERSONAL
+  SHARED
+}
+
+model ListMember {
+  id       String     @id @default(cuid())
+  listId   String
+  userId   String
+  role     MemberRole @default(VIEWER)
+  list     List       @relation(fields: [listId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime   @default(now())
+
+  @@unique([listId, userId])
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model Title {
+  id            String     @id @default(cuid())
+  imdbId        String     @unique
+  title         String
+  year          String?
+  type          TitleType
+  posterUrl     String?
+  plot          String?
+  imdbRating    String?
+  rtScore       String?
+  genre         String?
+  director      String?
+  actors        String?
+  totalSeasons  String?
+  metaFetchedAt DateTime?
+  listItems     ListItem[]
+}
+
+enum TitleType {
+  MOVIE
+  SERIES
+}
+
+model ListItem {
+  id               String      @id @default(cuid())
+  listId           String
+  titleId          String
+  list             List        @relation(fields: [listId], references: [id], onDelete: Cascade)
+  title            Title       @relation(fields: [titleId], references: [id])
+  addedById        String
+  recommendedBy    String?
+  streamingService String?
+  allEpisodesAvail Boolean?
+  currentSeason    Int?
+  notes            String?
+  watchStatus      WatchStatus @default(UNWATCHED)
+  watchedAt        DateTime?
+  archivedAt       DateTime?
+  priority         Int?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([listId, titleId])
+  @@index([titleId])
+}
+
+enum WatchStatus {
+  UNWATCHED
+  WATCHING
+  WATCHED
+  DROPPED
+}
+
+// NextAuth.js models (email/magic-link provider)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

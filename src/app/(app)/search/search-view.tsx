@@ -1,0 +1,111 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import Image from "next/image";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search as SearchIcon, Film } from "lucide-react";
+import type { OmdbSearchResult } from "@/lib/omdb";
+import { searchAction } from "./actions";
+import { AddToListSheet } from "@/components/add-to-list/add-to-list-sheet";
+
+export function SearchView() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<OmdbSearchResult[]>([]);
+  const [selected, setSelected] = useState<OmdbSearchResult | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      setHasSearched(false);
+      return;
+    }
+    const handle = setTimeout(() => {
+      setHasSearched(true);
+      startTransition(async () => {
+        const { results: data, error } = await searchAction(trimmed);
+        if (error) toast.error(error);
+        setResults(data);
+      });
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [query]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="relative">
+        <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search for a film or series…"
+          className="h-11 pl-9"
+        />
+      </div>
+
+      {isPending && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-2/3 w-full rounded-lg" />
+          ))}
+        </div>
+      )}
+
+      {!isPending && hasSearched && results.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
+          <Film className="size-8 text-muted-foreground" />
+          <p className="text-sm font-medium">No matches</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Try a different title or check the spelling.
+          </p>
+        </div>
+      )}
+
+      {!isPending && results.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {results.map((result) => (
+            <button
+              key={result.imdbId}
+              onClick={() => {
+                setSelected(result);
+                setSheetOpen(true);
+              }}
+              className="flex flex-col gap-1.5 text-left"
+            >
+              <div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-muted">
+                {result.posterUrl ? (
+                  <Image
+                    src={result.posterUrl}
+                    alt={result.title}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <Film className="size-6 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              <p className="truncate text-sm font-medium leading-tight">{result.title}</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">{result.year}</span>
+                <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                  {result.type === "SERIES" ? "Series" : "Movie"}
+                </Badge>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <AddToListSheet title={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
+    </div>
+  );
+}

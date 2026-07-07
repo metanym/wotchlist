@@ -52,6 +52,10 @@ export async function inviteMember(listId: string, formData: FormData) {
     data: { listId, userId: invitee.id, role },
   });
 
+  if (list.type === "PERSONAL") {
+    await db().list.update({ where: { id: listId }, data: { type: "SHARED" } });
+  }
+
   try {
     await sendListInviteEmail({
       email,
@@ -64,6 +68,9 @@ export async function inviteMember(listId: string, formData: FormData) {
   }
 
   revalidatePath(`/lists/${listId}/settings`);
+  revalidatePath(`/lists/${listId}`);
+  revalidatePath("/lists");
+  revalidatePath("/dashboard");
   return { success: true };
 }
 

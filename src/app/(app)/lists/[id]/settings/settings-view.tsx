@@ -40,12 +40,8 @@ export function SettingsView({
     <div className="flex flex-col gap-8">
       <h1 className="text-xl font-semibold tracking-tight">List settings</h1>
       <DetailsForm list={list} />
-      {list.type === "SHARED" && (
-        <>
-          <Separator />
-          <MembersSection list={list} currentUserId={currentUserId} />
-        </>
-      )}
+      <Separator />
+      <MembersSection list={list} currentUserId={currentUserId} />
       <Separator />
       <DangerZone listId={list.id} />
     </div>
@@ -115,7 +111,14 @@ function MembersSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-medium text-muted-foreground">Members</h2>
+      <div>
+        <h2 className="text-sm font-medium text-muted-foreground">Sharing</h2>
+        {list.type === "PERSONAL" && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            This list is private. Invite someone below to make it a shared list.
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-col gap-2">
         {list.members.map((member) => (

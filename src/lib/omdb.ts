@@ -10,6 +10,9 @@ export interface OmdbSearchResult {
   year: string;
   type: TitleType;
   posterUrl: string | null;
+  imdbRating: string | null;
+  rtScore: string | null;
+  totalSeasons: string | null;
 }
 
 interface OmdbSearchResponse {
@@ -64,13 +67,27 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
     return [];
   }
 
-  return data.Search.map((item) => ({
+  const results = data.Search.map((item) => ({
     imdbId: item.imdbID,
     title: item.Title,
     year: item.Year,
     type: toTitleType(item.Type),
     posterUrl: item.Poster && item.Poster !== "N/A" ? item.Poster : null,
   }));
+
+  const details = await Promise.all(
+    results.map((r) => fetchDetail(r.imdbId).catch(() => null))
+  );
+
+  return results.map((r, i) => {
+    const detail = details[i];
+    return {
+      ...r,
+      imdbRating: detail && detail.imdbRating !== "N/A" ? detail.imdbRating : null,
+      rtScore: detail ? rtScoreFrom(detail.Ratings) : null,
+      totalSeasons: detail?.totalSeasons ?? null,
+    };
+  });
 }
 
 async function fetchDetail(imdbId: string): Promise<OmdbDetailResponse | null> {

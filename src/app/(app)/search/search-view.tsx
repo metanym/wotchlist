@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search as SearchIcon, Film } from "lucide-react";
+import { Search as SearchIcon, Film, Star } from "lucide-react";
 import type { OmdbSearchResult } from "@/lib/omdb";
 import { searchAction } from "./actions";
 import { AddToListSheet } from "@/components/add-to-list/add-to-list-sheet";
@@ -94,11 +94,29 @@ export function SearchView() {
                 )}
               </div>
               <p className="truncate text-sm font-medium leading-tight">{result.title}</p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-xs text-muted-foreground">{result.year}</span>
                 <Badge variant="outline" className="h-4 px-1 text-[10px]">
                   {result.type === "SERIES" ? "Series" : "Movie"}
                 </Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                {result.imdbRating && (
+                  <Badge variant="outline" className="h-4 gap-0.5 px-1 text-[10px]">
+                    <Star className="size-2.5 fill-current" />
+                    {result.imdbRating}
+                  </Badge>
+                )}
+                {result.rtScore && (
+                  <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                    🍅 {result.rtScore}
+                  </Badge>
+                )}
+                {result.type === "SERIES" && result.totalSeasons && (
+                  <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                    {result.totalSeasons} {result.totalSeasons === "1" ? "Season" : "Seasons"}
+                  </Badge>
+                )}
               </div>
             </button>
           ))}

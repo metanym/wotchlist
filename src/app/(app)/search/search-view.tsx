@@ -10,6 +10,8 @@ import { Search as SearchIcon, Film, Star } from "lucide-react";
 import type { OmdbSearchResult } from "@/lib/omdb";
 import { searchAction } from "./actions";
 import { AddToListSheet } from "@/components/add-to-list/add-to-list-sheet";
+import { STREAMING_SERVICE_COLORS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 export function SearchView() {
   const [query, setQuery] = useState("");
@@ -118,6 +120,21 @@ export function SearchView() {
                   </Badge>
                 )}
               </div>
+              {result.streamingServices.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  {result.streamingServices.map((service) => (
+                    <Badge
+                      key={service}
+                      className={cn(
+                        "h-4 border px-1 text-[10px]",
+                        STREAMING_SERVICE_COLORS[service] ?? ""
+                      )}
+                    >
+                      {service}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </button>
           ))}
         </div>

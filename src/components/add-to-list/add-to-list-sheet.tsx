@@ -53,6 +53,10 @@ export function AddToListSheet({
 
   if (!title) return null;
 
+  const defaultStreamingService = STREAMING_SERVICES.find((s) =>
+    title.streamingServices.includes(s)
+  );
+
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       const result = await addToListAction(formData);
@@ -119,7 +123,7 @@ export function AddToListSheet({
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="streamingService">Streaming service</Label>
-            <Select name="streamingService">
+            <Select name="streamingService" defaultValue={defaultStreamingService}>
               <SelectTrigger id="streamingService" className="h-11 w-full">
                 <SelectValue placeholder="Where's it available?" />
               </SelectTrigger>

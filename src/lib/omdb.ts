@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getStreamingServices } from "@/lib/tmdb";
 import type { TitleType } from "@prisma/client";
 
 const OMDB_BASE_URL = "https://www.omdbapi.com/";
@@ -13,6 +14,7 @@ export interface OmdbSearchResult {
   imdbRating: string | null;
   rtScore: string | null;
   totalSeasons: string | null;
+  streamingServices: string[];
 }
 
 interface OmdbSearchResponse {
@@ -75,9 +77,10 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
     posterUrl: item.Poster && item.Poster !== "N/A" ? item.Poster : null,
   }));
 
-  const details = await Promise.all(
-    results.map((r) => fetchDetail(r.imdbId).catch(() => null))
-  );
+  const [details, streamingServices] = await Promise.all([
+    Promise.all(results.map((r) => fetchDetail(r.imdbId).catch(() => null))),
+    Promise.all(results.map((r) => getStreamingServices(r.imdbId, r.type))),
+  ]);
 
   return results.map((r, i) => {
     const detail = details[i];
@@ -86,6 +89,7 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
       imdbRating: detail && detail.imdbRating !== "N/A" ? detail.imdbRating : null,
       rtScore: detail ? rtScoreFrom(detail.Ratings) : null,
       totalSeasons: detail?.totalSeasons ?? null,
+      streamingServices: streamingServices[i],
     };
   });
 }

@@ -35,6 +35,7 @@ import {
   Info,
   CheckCircle2,
   Clock,
+  PlayCircle,
   MessageSquare,
 } from "lucide-react";
 
@@ -124,9 +125,9 @@ export function ListItemCard({
     <button
       type="button"
       onClick={() => setReviewsOpen(true)}
-      className="flex items-center gap-0.5 text-[10px] text-muted-foreground"
+      className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground"
     >
-      <MessageSquare className="size-3" />
+      <MessageSquare className="size-4" />
       {avgRating ? `${avgRating.toFixed(1)} (${item.reviews.length})` : "Review"}
     </button>
   );
@@ -193,7 +194,7 @@ export function ListItemCard({
             type="button"
             onClick={() => setInfoOpen(true)}
             aria-label="View synopsis"
-            className="flex size-7 items-center justify-center rounded-full bg-background/80 backdrop-blur"
+            className="flex size-9 items-center justify-center rounded-full bg-background/80 backdrop-blur"
           >
             <Info className="size-4" />
           </button>
@@ -223,7 +224,8 @@ export function ListItemCard({
           </div>
         )}
         {item.currentSeason && (
-          <div className="absolute bottom-1.5 right-1.5 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
+          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
+            <PlayCircle className="size-3 text-foreground" />
             <span className="text-[9px] font-medium">Season {item.currentSeason}</span>
           </div>
         )}
@@ -259,22 +261,25 @@ export function ListItemCard({
           )}
         </div>
 
-        {item.streamingService && (
-          <Badge
-            className={cn(
-              "w-fit border text-[10px]",
-              STREAMING_SERVICE_COLORS[item.streamingService] ?? ""
-            )}
-          >
-            {item.streamingService}
-          </Badge>
-        )}
+        <div className="flex items-center justify-between gap-2">
+          {item.streamingService ? (
+            <Badge
+              className={cn(
+                "w-fit border text-[10px]",
+                STREAMING_SERVICE_COLORS[item.streamingService] ?? ""
+              )}
+            >
+              {item.streamingService}
+            </Badge>
+          ) : (
+            <span />
+          )}
+          {reviewsTrigger}
+        </div>
 
         {item.recommendedBy && (
           <p className="truncate text-xs text-muted-foreground">Rec by {item.recommendedBy}</p>
         )}
-
-        {reviewsTrigger}
       </div>
 
       {dialogs}

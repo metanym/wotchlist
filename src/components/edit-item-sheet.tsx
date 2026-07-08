@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Toggle } from "@/components/ui/toggle";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -23,10 +24,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { STREAMING_SERVICES } from "@/lib/constants";
-import { updateItemDetails } from "@/app/(app)/lists/[id]/item-actions";
+import {
+  updateItemDetails,
+  getMovableLists,
+  moveItem,
+} from "@/app/(app)/lists/[id]/item-actions";
 import type { ListItem, Title } from "@prisma/client";
+import { ArrowRightLeft } from "lucide-react";
 
 type ItemWithTitle = ListItem & { title: Title };
+
+interface MovableList {
+  id: string;
+  name: string;
+}
 
 export function EditItemSheet({
   item,
@@ -39,6 +50,19 @@ export function EditItemSheet({
 }) {
   const [isPending, startTransition] = useTransition();
   const [allEpisodesAvail, setAllEpisodesAvail] = useState(false);
+  const [movableLists, setMovableLists] = useState<MovableList[]>([]);
+  const [targetListId, setTargetListId] = useState<string>("");
+  const [isMoving, startMoving] = useTransition();
+
+  useEffect(() => {
+    if (open && item) {
+      getMovableLists(item.listId).then((lists) => {
+        setMovableLists(lists);
+        setTargetListId(lists[0]?.id ?? "");
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item?.listId]);
 
   if (!item) return null;
 
@@ -49,6 +73,19 @@ export function EditItemSheet({
         toast.error(result.error);
       } else {
         toast.success("Saved");
+        onOpenChange(false);
+      }
+    });
+  }
+
+  function onMove() {
+    if (!targetListId) return;
+    startMoving(async () => {
+      const result = await moveItem(item!.listId, item!.id, targetListId);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Moved "${item!.title.title}"`);
         onOpenChange(false);
       }
     });
@@ -166,6 +203,43 @@ export function EditItemSheet({
             </Button>
           </SheetFooter>
         </form>
+
+        <Separator className="my-1" />
+
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          <Label className="flex items-center gap-1.5">
+            <ArrowRightLeft className="size-3.5" />
+            Move to another list
+          </Label>
+          {movableLists.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              You don&apos;t have another list to move this to.
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <Select value={targetListId} onValueChange={setTargetListId}>
+                <SelectTrigger className="h-11 flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {movableLists.map((list) => (
+                    <SelectItem key={list.id} value={list.id}>
+                      {list.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="h-11"
+                disabled={isMoving || !targetListId}
+                onClick={onMove}
+              >
+                {isMoving ? "Moving…" : "Move"}
+              </Button>
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -96,3 +96,45 @@ export async function deleteItem(listId: string, itemId: string) {
   revalidatePath(`/lists/${listId}`);
   return { success: true };
 }
+
+export async function getMovableLists(listId: string) {
+  const session = await auth();
+  if (!session) return [];
+
+  const memberships = await db().listMember.findMany({
+    where: {
+      userId: session.user.id,
+      role: { in: ["OWNER", "EDITOR"] },
+      listId: { not: listId },
+    },
+    include: { list: true },
+    orderBy: { list: { name: "asc" } },
+  });
+
+  return memberships.map((m) => m.list);
+}
+
+export async function moveItem(listId: string, itemId: string, targetListId: string) {
+  const { error } = await assertCanEdit(listId);
+  if (error) return { error };
+
+  if (targetListId === listId) {
+    return { error: "That's already the list this title is on." };
+  }
+
+  const { error: targetError } = await assertCanEdit(targetListId);
+  if (targetError) return { error: "You don't have permission to add to that list." };
+
+  try {
+    await db().listItem.update({
+      where: { id: itemId },
+      data: { listId: targetListId },
+    });
+  } catch {
+    return { error: "That title is already on the target list." };
+  }
+
+  revalidatePath(`/lists/${listId}`);
+  revalidatePath(`/lists/${targetListId}`);
+  return { success: true };
+}

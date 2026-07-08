@@ -26,6 +26,7 @@ export async function inviteMember(listId: string, formData: FormData) {
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "VIEWER") as MemberRole;
+  const message = String(formData.get("message") ?? "").trim() || null;
   if (!email) return { error: "Enter an email address." };
 
   const list = await db().list.findUnique({ where: { id: listId } });
@@ -62,6 +63,7 @@ export async function inviteMember(listId: string, formData: FormData) {
       listId,
       listName: list.name,
       inviterName: session!.user.displayName ?? session!.user.email ?? "A friend",
+      message,
     });
   } catch {
     return { error: "Added them to the list, but the invite email failed to send." };

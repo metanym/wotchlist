@@ -190,6 +190,11 @@ function MembersSection({
             </SelectContent>
           </Select>
         </div>
+        <Textarea
+          name="message"
+          placeholder="Add a personal message (optional)"
+          className="min-h-16"
+        />
         <Button type="submit" className="h-11" disabled={isPending}>
           {isPending ? "Sending…" : "Send invite"}
         </Button>

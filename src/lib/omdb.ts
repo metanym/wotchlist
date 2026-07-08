@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getStreamingServices } from "@/lib/tmdb";
+import { getTmdbEnrichment } from "@/lib/tmdb";
 import type { TitleType } from "@prisma/client";
 
 const OMDB_BASE_URL = "https://www.omdbapi.com/";
@@ -11,9 +11,15 @@ export interface OmdbSearchResult {
   year: string;
   type: TitleType;
   posterUrl: string | null;
+  plot: string | null;
+  genre: string | null;
+  director: string | null;
+  actors: string | null;
   imdbRating: string | null;
   rtScore: string | null;
   totalSeasons: string | null;
+  totalEpisodes: number | null;
+  allEpisodesAvailable: boolean | null;
   streamingServices: string[];
 }
 
@@ -57,6 +63,10 @@ function omdbApiKey() {
   return key;
 }
 
+function textOrNull(value: string | undefined) {
+  return value && value !== "N/A" ? value : null;
+}
+
 export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
   const url = new URL(OMDB_BASE_URL);
   url.searchParams.set("apikey", omdbApiKey());
@@ -77,19 +87,26 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
     posterUrl: item.Poster && item.Poster !== "N/A" ? item.Poster : null,
   }));
 
-  const [details, streamingServices] = await Promise.all([
+  const [details, enrichments] = await Promise.all([
     Promise.all(results.map((r) => fetchDetail(r.imdbId).catch(() => null))),
-    Promise.all(results.map((r) => getStreamingServices(r.imdbId, r.type))),
+    Promise.all(results.map((r) => getTmdbEnrichment(r.imdbId, r.type))),
   ]);
 
   return results.map((r, i) => {
     const detail = details[i];
+    const enrichment = enrichments[i];
     return {
       ...r,
+      plot: detail ? textOrNull(detail.Plot) : null,
+      genre: detail ? textOrNull(detail.Genre) : null,
+      director: detail ? textOrNull(detail.Director) : null,
+      actors: detail ? textOrNull(detail.Actors) : null,
       imdbRating: detail && detail.imdbRating !== "N/A" ? detail.imdbRating : null,
       rtScore: detail ? rtScoreFrom(detail.Ratings) : null,
       totalSeasons: detail?.totalSeasons ?? null,
-      streamingServices: streamingServices[i],
+      totalEpisodes: enrichment.numberOfEpisodes,
+      allEpisodesAvailable: enrichment.allEpisodesAvailable,
+      streamingServices: enrichment.streamingServices,
     };
   });
 }
@@ -127,35 +144,28 @@ export async function upsertTitle(imdbId: string) {
     throw new Error("Title not found on OMDB");
   }
 
+  const type = toTitleType(detail.Type);
+  const enrichment = await getTmdbEnrichment(imdbId, type);
+
+  const data = {
+    title: detail.Title,
+    year: detail.Year,
+    type,
+    posterUrl: textOrNull(detail.Poster),
+    plot: textOrNull(detail.Plot),
+    imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
+    rtScore: rtScoreFrom(detail.Ratings),
+    genre: textOrNull(detail.Genre),
+    director: textOrNull(detail.Director),
+    actors: textOrNull(detail.Actors),
+    totalSeasons: detail.totalSeasons,
+    totalEpisodes: enrichment.numberOfEpisodes,
+    metaFetchedAt: new Date(),
+  };
+
   return db().title.upsert({
     where: { imdbId },
-    create: {
-      imdbId,
-      title: detail.Title,
-      year: detail.Year,
-      type: toTitleType(detail.Type),
-      posterUrl: detail.Poster && detail.Poster !== "N/A" ? detail.Poster : null,
-      plot: detail.Plot !== "N/A" ? detail.Plot : null,
-      imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
-      rtScore: rtScoreFrom(detail.Ratings),
-      genre: detail.Genre !== "N/A" ? detail.Genre : null,
-      director: detail.Director !== "N/A" ? detail.Director : null,
-      actors: detail.Actors !== "N/A" ? detail.Actors : null,
-      totalSeasons: detail.totalSeasons,
-      metaFetchedAt: new Date(),
-    },
-    update: {
-      title: detail.Title,
-      year: detail.Year,
-      posterUrl: detail.Poster && detail.Poster !== "N/A" ? detail.Poster : null,
-      plot: detail.Plot !== "N/A" ? detail.Plot : null,
-      imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
-      rtScore: rtScoreFrom(detail.Ratings),
-      genre: detail.Genre !== "N/A" ? detail.Genre : null,
-      director: detail.Director !== "N/A" ? detail.Director : null,
-      actors: detail.Actors !== "N/A" ? detail.Actors : null,
-      totalSeasons: detail.totalSeasons,
-      metaFetchedAt: new Date(),
-    },
+    create: { imdbId, ...data },
+    update: data,
   });
 }

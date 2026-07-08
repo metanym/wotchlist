@@ -47,9 +47,10 @@ export function AddToListSheet({
   useEffect(() => {
     if (open) {
       getEditableLists().then(setLists);
-      setAllEpisodesAvail(false);
+      setAllEpisodesAvail(title?.allEpisodesAvailable ?? false);
     }
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, title?.imdbId]);
 
   if (!title) return null;
 

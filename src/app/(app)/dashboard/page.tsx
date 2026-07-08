@@ -5,9 +5,9 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getUserLists } from "@/lib/lists";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Film, ListVideo, Plus, Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { ListCard } from "@/components/list-card";
+import { Film, ListVideo, Plus } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -57,24 +57,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {lists.slice(0, 4).map((list) => (
-              <Link key={list.id} href={`/lists/${list.id}`}>
-                <Card className="transition-colors hover:border-foreground/20">
-                  <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-                    <CardTitle className="text-base">{list.name}</CardTitle>
-                    {list.type === "SHARED" && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Users className="size-3" />
-                        Shared
-                      </Badge>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {list.itemCount} {list.itemCount === 1 ? "title" : "titles"}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
+              <ListCard key={list.id} list={list} />
             ))}
             {lists.length > 4 && (
               <Button asChild variant="ghost" className="h-9">

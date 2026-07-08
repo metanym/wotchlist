@@ -8,6 +8,11 @@ export async function getUserLists(userId: string) {
       list: {
         include: {
           _count: { select: { items: { where: { archivedAt: null } } } },
+          items: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { title: { select: { posterUrl: true } } },
+          },
         },
       },
     },
@@ -18,6 +23,7 @@ export async function getUserLists(userId: string) {
     ...m.list,
     role: m.role,
     itemCount: m.list._count.items,
+    coverImageUrl: m.list.items[0]?.title.posterUrl ?? null,
   }));
 }
 

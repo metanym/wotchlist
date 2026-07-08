@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditItemSheet } from "@/components/edit-item-sheet";
+import { TitleInfoDialog } from "@/components/title-info-dialog";
+import { ReviewsDialog } from "@/components/reviews-dialog";
 import {
   STREAMING_SERVICE_COLORS,
   PRIORITY_LABELS,
@@ -21,10 +23,22 @@ import {
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { setWatchStatus, toggleArchived, deleteItem } from "@/app/(app)/lists/[id]/item-actions";
-import type { ListItem, Title, WatchStatus } from "@prisma/client";
-import { Film, MoreVertical, Star, Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
+import type { ListItem, Review, Title, User, WatchStatus } from "@prisma/client";
+import {
+  Film,
+  MoreVertical,
+  Star,
+  Archive,
+  ArchiveRestore,
+  Pencil,
+  Trash2,
+  Info,
+  CheckCircle2,
+  Clock,
+  MessageSquare,
+} from "lucide-react";
 
-type ItemWithTitle = ListItem & { title: Title };
+type ItemWithTitle = ListItem & { title: Title; reviews: (Review & { user: User })[] };
 
 const STATUS_DOT: Record<WatchStatus, string> = {
   UNWATCHED: "bg-zinc-500",
@@ -33,18 +47,29 @@ const STATUS_DOT: Record<WatchStatus, string> = {
   DROPPED: "bg-red-500",
 };
 
+function averageRating(reviews: Review[]) {
+  if (reviews.length === 0) return null;
+  return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+}
+
 export function ListItemCard({
   item,
   canEdit,
   compact,
+  currentUserId,
 }: {
   item: ItemWithTitle;
   canEdit: boolean;
   compact: boolean;
+  currentUserId: string;
 }) {
   const [, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
+
+  const avgRating = averageRating(item.reviews);
 
   function onStatusChange(status: WatchStatus) {
     startTransition(async () => {
@@ -71,6 +96,41 @@ export function ListItemCard({
     });
   }
 
+  const dialogs = (
+    <>
+      <EditItemSheet item={item} open={editOpen} onOpenChange={setEditOpen} />
+      <TitleInfoDialog info={item.title} open={infoOpen} onOpenChange={setInfoOpen} />
+      <ReviewsDialog
+        listId={item.listId}
+        itemId={item.id}
+        itemTitle={item.title.title}
+        reviews={item.reviews}
+        currentUserId={currentUserId}
+        open={reviewsOpen}
+        onOpenChange={setReviewsOpen}
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Remove title"
+        description={`Remove "${item.title.title}" from this list? This can't be undone.`}
+        confirmLabel="Remove"
+        onConfirm={onDelete}
+      />
+    </>
+  );
+
+  const reviewsTrigger = (
+    <button
+      type="button"
+      onClick={() => setReviewsOpen(true)}
+      className="flex items-center gap-0.5 text-[10px] text-muted-foreground"
+    >
+      <MessageSquare className="size-3" />
+      {avgRating ? `${avgRating.toFixed(1)} (${item.reviews.length})` : "Review"}
+    </button>
+  );
+
   if (compact) {
     return (
       <Card className="flex-row items-center gap-3 p-3">
@@ -90,7 +150,14 @@ export function ListItemCard({
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {item.title.year} · {item.streamingService ?? "No service set"}
+            {item.currentSeason ? ` · S${item.currentSeason}` : ""}
           </p>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setInfoOpen(true)} className="text-muted-foreground">
+              <Info className="size-3.5" />
+            </button>
+            {reviewsTrigger}
+          </div>
         </div>
         <ItemMenu
           item={item}
@@ -100,15 +167,7 @@ export function ListItemCard({
           onEdit={() => setEditOpen(true)}
           onDeleteRequest={() => setDeleteOpen(true)}
         />
-        <EditItemSheet item={item} open={editOpen} onOpenChange={setEditOpen} />
-        <ConfirmDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          title="Remove title"
-          description={`Remove "${item.title.title}" from this list? This can't be undone.`}
-          confirmLabel="Remove"
-          onConfirm={onDelete}
-        />
+        {dialogs}
       </Card>
     );
   }
@@ -129,7 +188,15 @@ export function ListItemCard({
             <Film className="size-8 text-muted-foreground" />
           </div>
         )}
-        <div className="absolute right-1.5 top-1.5">
+        <div className="absolute right-1.5 top-1.5 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setInfoOpen(true)}
+            aria-label="View synopsis"
+            className="flex size-7 items-center justify-center rounded-full bg-background/80 backdrop-blur"
+          >
+            <Info className="size-4" />
+          </button>
           <ItemMenu
             item={item}
             canEdit={canEdit}
@@ -143,6 +210,23 @@ export function ListItemCard({
           <span className={cn("size-2 rounded-full", STATUS_DOT[item.watchStatus])} />
           <span className="text-[10px] font-medium">{WATCH_STATUS_LABELS[item.watchStatus]}</span>
         </div>
+        {item.title.type === "SERIES" && item.allEpisodesAvail !== null && (
+          <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
+            {item.allEpisodesAvail ? (
+              <CheckCircle2 className="size-3 text-emerald-500" />
+            ) : (
+              <Clock className="size-3 text-amber-500" />
+            )}
+            <span className="text-[9px] font-medium">
+              {item.allEpisodesAvail ? "All available" : "Still airing"}
+            </span>
+          </div>
+        )}
+        {item.currentSeason && (
+          <div className="absolute bottom-1.5 right-1.5 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
+            <span className="text-[9px] font-medium">Season {item.currentSeason}</span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5 px-3">
@@ -166,6 +250,13 @@ export function ListItemCard({
               {PRIORITY_LABELS[item.priority]}
             </Badge>
           )}
+          {item.title.type === "SERIES" && item.title.totalSeasons && (
+            <Badge variant="outline" className="text-[10px]">
+              {item.title.totalSeasons}
+              {item.title.totalSeasons === "1" ? " Season" : " Seasons"}
+              {item.title.totalEpisodes ? ` · ${item.title.totalEpisodes} Ep` : ""}
+            </Badge>
+          )}
         </div>
 
         {item.streamingService && (
@@ -182,17 +273,11 @@ export function ListItemCard({
         {item.recommendedBy && (
           <p className="truncate text-xs text-muted-foreground">Rec by {item.recommendedBy}</p>
         )}
+
+        {reviewsTrigger}
       </div>
 
-      <EditItemSheet item={item} open={editOpen} onOpenChange={setEditOpen} />
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Remove title"
-        description={`Remove "${item.title.title}" from this list? This can't be undone.`}
-        confirmLabel="Remove"
-        onConfirm={onDelete}
-      />
+      {dialogs}
     </Card>
   );
 }

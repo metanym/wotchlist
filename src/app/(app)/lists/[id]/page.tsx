@@ -25,7 +25,12 @@ export default async function ListDetailPage({
   const list = await db().list.findUnique({
     where: { id },
     include: {
-      items: { include: { title: true } },
+      items: {
+        include: {
+          title: true,
+          reviews: { include: { user: true }, orderBy: { createdAt: "desc" } },
+        },
+      },
     },
   });
   if (!list) notFound();
@@ -56,7 +61,11 @@ export default async function ListDetailPage({
         )}
       </div>
 
-      <ListDetailView items={list.items} canEdit={canEdit(membership.role)} />
+      <ListDetailView
+        items={list.items}
+        canEdit={canEdit(membership.role)}
+        currentUserId={session.user.id}
+      />
     </div>
   );
 }

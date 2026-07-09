@@ -25,6 +25,9 @@ import {
 import { STREAMING_SERVICES } from "@/lib/constants";
 import type { OmdbSearchResult } from "@/lib/omdb";
 import { addToListAction, getEditableLists } from "@/app/(app)/search/actions";
+import { Plus } from "lucide-react";
+
+const NEW_LIST_VALUE = "__new__";
 
 interface EditableList {
   id: string;
@@ -41,12 +44,16 @@ export function AddToListSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const [lists, setLists] = useState<EditableList[]>([]);
+  const [selectedListId, setSelectedListId] = useState<string>("");
   const [allEpisodesAvail, setAllEpisodesAvail] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (open) {
-      getEditableLists().then(setLists);
+      getEditableLists().then((result) => {
+        setLists(result);
+        setSelectedListId(result[0]?.id ?? NEW_LIST_VALUE);
+      });
       setAllEpisodesAvail(title?.allEpisodesAvailable ?? false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,6 +64,7 @@ export function AddToListSheet({
   const defaultStreamingService = STREAMING_SERVICES.find((s) =>
     title.streamingServices.includes(s)
   );
+  const isCreatingList = selectedListId === NEW_LIST_VALUE;
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
@@ -100,25 +108,36 @@ export function AddToListSheet({
         <form action={onSubmit} className="flex flex-1 flex-col gap-4 px-4 pt-4">
           <input type="hidden" name="imdbId" value={title.imdbId} />
 
-          {lists.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              You don&apos;t have any lists you can add to yet.
-            </p>
-          ) : (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="listId">List</Label>
+            <Select name="listId" value={selectedListId} onValueChange={setSelectedListId} required>
+              <SelectTrigger id="listId" className="h-11 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {lists.map((list) => (
+                  <SelectItem key={list.id} value={list.id}>
+                    {list.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value={NEW_LIST_VALUE}>
+                  <Plus className="size-3.5" />
+                  Create new list
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isCreatingList && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="listId">List</Label>
-              <Select name="listId" defaultValue={lists[0]?.id} required>
-                <SelectTrigger id="listId" className="h-11 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {lists.map((list) => (
-                    <SelectItem key={list.id} value={list.id}>
-                      {list.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="newListName">New list name</Label>
+              <Input
+                id="newListName"
+                name="newListName"
+                placeholder="Rainy Day Films"
+                required
+                className="h-11"
+              />
             </div>
           )}
 
@@ -191,7 +210,7 @@ export function AddToListSheet({
           </div>
 
           <SheetFooter className="mt-auto px-0">
-            <Button type="submit" className="h-11" disabled={isPending || lists.length === 0}>
+            <Button type="submit" className="h-11" disabled={isPending}>
               {isPending ? "Adding…" : "Add to list"}
             </Button>
           </SheetFooter>

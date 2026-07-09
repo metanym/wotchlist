@@ -32,8 +32,27 @@ export async function addToListAction(formData: FormData) {
   const session = await auth();
   if (!session) return { error: "You need to sign in." };
 
-  const listId = String(formData.get("listId") ?? "");
+  let listId = String(formData.get("listId") ?? "");
   const imdbId = String(formData.get("imdbId") ?? "");
+
+  if (listId === "__new__") {
+    const newListName = String(formData.get("newListName") ?? "").trim();
+    if (!newListName) return { error: "Give your new list a name." };
+
+    const list = await db().list.create({
+      data: {
+        name: newListName,
+        ownerId: session.user.id,
+        members: {
+          create: { userId: session.user.id, role: "OWNER" },
+        },
+      },
+    });
+    listId = list.id;
+    revalidatePath("/lists");
+    revalidatePath("/dashboard");
+  }
+
   const membership = await getMembership(listId, session.user.id);
   if (!membership || membership.role === "VIEWER") {
     return { error: "You don't have permission to add to this list." };

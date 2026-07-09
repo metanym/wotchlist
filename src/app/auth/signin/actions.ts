@@ -14,3 +14,7 @@ export async function sendMagicLink(email: string): Promise<{ error?: string }> 
     throw error;
   }
 }
+
+export async function signInWithFacebook() {
+  await signIn("facebook", { redirectTo: "/dashboard" });
+}

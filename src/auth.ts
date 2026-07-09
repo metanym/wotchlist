@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Resend from "next-auth/providers/resend";
+import Facebook from "next-auth/providers/facebook";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { Resend as ResendClient } from "resend";
 import { db } from "@/lib/db";
@@ -33,6 +34,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (error) {
           throw new Error(`Resend error: ${error.message}`);
         }
+      },
+    }),
+    Facebook({
+      clientId: process.env.FACEBOOK_CLIENT_ID,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        return {
+          id: profile.id,
+          email: profile.email,
+          displayName: profile.name ?? null,
+          emailVerified: null,
+        };
       },
     }),
   ],

@@ -152,6 +152,9 @@ export function ListItemCard({
           <p className="truncate text-xs text-muted-foreground">
             {item.title.year} · {item.streamingService ?? "No service set"}
             {item.currentSeason ? ` · S${item.currentSeason}` : ""}
+            {item.title.type === "SERIES" && item.title.totalEpisodes
+              ? ` · ${item.title.totalEpisodes} Ep`
+              : ""}
           </p>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setInfoOpen(true)} className="text-muted-foreground">

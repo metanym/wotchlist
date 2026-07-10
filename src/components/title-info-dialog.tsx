@@ -94,7 +94,7 @@ export function TitleInfoDialog({
                   🍅 {info.rtScore}
                 </Badge>
               )}
-              {info.contentRating && (
+              {info.type === "MOVIE" && info.contentRating && (
                 <Badge variant="outline" className="text-[10px]">
                   {info.contentRating}
                 </Badge>

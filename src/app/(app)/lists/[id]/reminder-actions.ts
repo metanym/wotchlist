@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getMembership } from "@/lib/lists";
+import { estimateSeasonCompletionDate } from "@/lib/tmdb";
 
 export async function setReminder(listId: string, itemId: string, formData: FormData) {
   const session = await auth();
@@ -31,6 +32,21 @@ export async function setReminder(listId: string, itemId: string, formData: Form
 
   revalidatePath(`/lists/${listId}`);
   return { success: true };
+}
+
+export async function getAvailabilityEstimate(itemId: string) {
+  const session = await auth();
+  if (!session) return null;
+
+  const item = await db().listItem.findUnique({
+    where: { id: itemId },
+    include: { title: true },
+  });
+  if (!item || item.title.type !== "SERIES" || item.allEpisodesAvail === true) {
+    return null;
+  }
+
+  return estimateSeasonCompletionDate(item.title.imdbId);
 }
 
 export async function cancelReminder(listId: string, itemId: string) {

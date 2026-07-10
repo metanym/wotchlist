@@ -53,13 +53,21 @@ interface TmdbProvider {
   provider_name: string;
 }
 
+interface TmdbReleaseDateEntry {
+  certification: string;
+  type: number;
+}
+
 interface TmdbDetailsResponse {
   status?: string;
   number_of_episodes?: number;
   number_of_seasons?: number;
-  next_episode_to_air?: unknown;
+  next_episode_to_air?: { season_number?: number } | null;
   "watch/providers"?: {
     results?: Record<string, { flatrate?: TmdbProvider[]; ads?: TmdbProvider[]; free?: TmdbProvider[] }>;
+  };
+  release_dates?: {
+    results?: Array<{ iso_3166_1: string; release_dates: TmdbReleaseDateEntry[] }>;
   };
 }
 
@@ -68,6 +76,7 @@ export interface TmdbEnrichment {
   numberOfEpisodes: number | null;
   numberOfSeasons: number | null;
   allEpisodesAvailable: boolean | null;
+  ukCertification: string | null;
 }
 
 const EMPTY_ENRICHMENT: TmdbEnrichment = {
@@ -75,7 +84,14 @@ const EMPTY_ENRICHMENT: TmdbEnrichment = {
   numberOfEpisodes: null,
   numberOfSeasons: null,
   allEpisodesAvailable: null,
+  ukCertification: null,
 };
+
+function ukCertificationFrom(details: TmdbDetailsResponse): string | null {
+  const gb = details.release_dates?.results?.find((r) => r.iso_3166_1 === "GB");
+  const entry = gb?.release_dates.find((r) => r.certification.trim().length > 0);
+  return entry?.certification.trim() || null;
+}
 
 export async function getTmdbEnrichment(
   imdbId: string,
@@ -94,7 +110,10 @@ export async function getTmdbEnrichment(
 
     const detailsUrl = new URL(`${TMDB_BASE_URL}/${mediaType}/${match.id}`);
     detailsUrl.searchParams.set("api_key", tmdbApiKey());
-    detailsUrl.searchParams.set("append_to_response", "watch/providers");
+    detailsUrl.searchParams.set(
+      "append_to_response",
+      type === "MOVIE" ? "watch/providers,release_dates" : "watch/providers"
+    );
     const detailsRes = await fetch(detailsUrl, { next: { revalidate: 0 } });
     const details: TmdbDetailsResponse = await detailsRes.json();
 
@@ -110,8 +129,51 @@ export async function getTmdbEnrichment(
       numberOfEpisodes: type === "SERIES" ? details.number_of_episodes ?? null : null,
       numberOfSeasons: type === "SERIES" ? details.number_of_seasons ?? null : null,
       allEpisodesAvailable: type === "SERIES" ? details.next_episode_to_air == null : null,
+      ukCertification: type === "MOVIE" ? ukCertificationFrom(details) : null,
     };
   } catch {
     return EMPTY_ENRICHMENT;
+  }
+}
+
+/**
+ * Estimates when a currently-airing series will have all episodes of its
+ * latest season available, by taking the latest scheduled air_date across
+ * that season's episode list. TMDB pre-populates air dates for the whole
+ * announced season, not just the next episode — but schedules do slip, so
+ * this is an estimate, not a guarantee.
+ */
+export async function estimateSeasonCompletionDate(imdbId: string): Promise<Date | null> {
+  try {
+    const findUrl = new URL(`${TMDB_BASE_URL}/find/${imdbId}`);
+    findUrl.searchParams.set("api_key", tmdbApiKey());
+    findUrl.searchParams.set("external_source", "imdb_id");
+    const findRes = await fetch(findUrl, { next: { revalidate: 0 } });
+    const findData: TmdbFindResponse = await findRes.json();
+    const match = findData.tv_results?.[0];
+    if (!match) return null;
+
+    const detailsUrl = new URL(`${TMDB_BASE_URL}/tv/${match.id}`);
+    detailsUrl.searchParams.set("api_key", tmdbApiKey());
+    const detailsRes = await fetch(detailsUrl, { next: { revalidate: 0 } });
+    const details: TmdbDetailsResponse = await detailsRes.json();
+
+    const seasonNumber = details.next_episode_to_air?.season_number;
+    if (seasonNumber == null) return null;
+
+    const seasonUrl = new URL(`${TMDB_BASE_URL}/tv/${match.id}/season/${seasonNumber}`);
+    seasonUrl.searchParams.set("api_key", tmdbApiKey());
+    const seasonRes = await fetch(seasonUrl, { next: { revalidate: 0 } });
+    const season: { episodes?: Array<{ air_date?: string | null }> } = await seasonRes.json();
+
+    const airDates = (season.episodes ?? [])
+      .map((e) => e.air_date)
+      .filter((d): d is string => !!d)
+      .map((d) => new Date(d));
+    if (airDates.length === 0) return null;
+
+    return new Date(Math.max(...airDates.map((d) => d.getTime())));
+  } catch {
+    return null;
   }
 }

@@ -27,10 +27,13 @@ function NotificationText({ n }: { n: NotificationList[number] }) {
 
   if (n.type === "REMINDER") {
     return (
-      <p className="text-sm">
-        Reminder: <span className="font-medium">{titleName}</span> in{" "}
-        <span className="font-medium">{n.list.name}</span>
-      </p>
+      <>
+        <p className="text-sm">
+          Reminder: <span className="font-medium">{titleName}</span> in{" "}
+          <span className="font-medium">{n.list.name}</span>
+        </p>
+        {n.message && <p className="text-sm text-muted-foreground">&ldquo;{n.message}&rdquo;</p>}
+      </>
     );
   }
 

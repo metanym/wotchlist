@@ -5,7 +5,6 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,6 +87,9 @@ export function ListItemCard({
 
   const avgRating = averageRating(item.reviews);
   const myReminder = item.reminders[0] ?? null;
+  const isReminderOverdue = myReminder
+    ? new Date(myReminder.remindAt).getTime() <= Date.now()
+    : false;
   const showAddedBy = listType === "SHARED";
 
   function onStatusChange(status: WatchStatus) {
@@ -174,7 +176,21 @@ export function ListItemCard({
           <div className="flex items-center gap-1.5">
             <span className={cn("size-2 rounded-full", STATUS_DOT[item.watchStatus])} />
             <p className="truncate text-sm font-medium">{item.title.title}</p>
-            {myReminder && <BellRing className="size-3 shrink-0 text-amber-500" />}
+            {myReminder && (
+              <button
+                type="button"
+                onClick={() => setReminderOpen(true)}
+                aria-label="View reminder"
+                className="shrink-0"
+              >
+                <BellRing
+                  className={cn(
+                    "size-3",
+                    isReminderOverdue ? "text-red-500 animate-pulse" : "text-amber-500"
+                  )}
+                />
+              </button>
+            )}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {item.title.year} · {item.streamingService ?? "No service set"}
@@ -192,12 +208,7 @@ export function ListItemCard({
             </button>
             {reviewsTrigger}
             {showAddedBy && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Avatar className="size-4">
-                  <AvatarFallback className="text-[8px]">
-                    {displayName(item.addedBy).slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              <span className="text-[10px] text-muted-foreground">
                 {displayName(item.addedBy)}
               </span>
             )}
@@ -277,9 +288,19 @@ export function ListItemCard({
           </div>
         )}
         {myReminder && (
-          <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
-            <BellRing className="size-3 text-amber-500" />
-          </div>
+          <button
+            type="button"
+            onClick={() => setReminderOpen(true)}
+            aria-label="View reminder"
+            className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur"
+          >
+            <BellRing
+              className={cn(
+                "size-3",
+                isReminderOverdue ? "text-red-500 animate-pulse" : "text-amber-500"
+              )}
+            />
+          </button>
         )}
       </div>
 
@@ -299,7 +320,7 @@ export function ListItemCard({
               🍅 {item.title.rtScore}
             </Badge>
           )}
-          {item.title.contentRating && (
+          {item.title.type === "MOVIE" && item.title.contentRating && (
             <Badge variant="outline" className="text-[10px]">
               {item.title.contentRating}
             </Badge>
@@ -344,16 +365,9 @@ export function ListItemCard({
         )}
 
         {showAddedBy && (
-          <div className="flex items-center gap-1.5">
-            <Avatar className="size-5">
-              <AvatarFallback className="text-[9px]">
-                {displayName(item.addedBy).slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <p className="truncate text-xs text-muted-foreground">
-              Added by {displayName(item.addedBy)}
-            </p>
-          </div>
+          <p className="truncate text-[10px] text-muted-foreground">
+            Added by {displayName(item.addedBy)}
+          </p>
         )}
       </div>
 

@@ -22,6 +22,7 @@ async function main() {
         type: "REMINDER",
         listId: reminder.listItem.listId,
         listItemId: reminder.listItemId,
+        message: reminder.note,
       },
     });
     await prisma.reminder.update({

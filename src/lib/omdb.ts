@@ -113,7 +113,10 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
       actors: detail ? textOrNull(detail.Actors) : null,
       imdbRating: detail && detail.imdbRating !== "N/A" ? detail.imdbRating : null,
       rtScore: detail ? rtScoreFrom(detail.Ratings) : null,
-      contentRating: detail ? textOrNull(detail.Rated) : null,
+      contentRating:
+        r.type === "MOVIE"
+          ? enrichment.ukCertification ?? (detail ? textOrNull(detail.Rated) : null)
+          : null,
       runtimeMinutes: detail ? parseRuntimeMinutes(detail.Runtime) : null,
       totalSeasons: detail?.totalSeasons ?? null,
       totalEpisodes: enrichment.numberOfEpisodes,
@@ -167,7 +170,8 @@ export async function upsertTitle(imdbId: string) {
     plot: textOrNull(detail.Plot),
     imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
     rtScore: rtScoreFrom(detail.Ratings),
-    contentRating: textOrNull(detail.Rated),
+    contentRating:
+      type === "MOVIE" ? enrichment.ukCertification ?? textOrNull(detail.Rated) : null,
     runtimeMinutes: parseRuntimeMinutes(detail.Runtime),
     genre: textOrNull(detail.Genre),
     director: textOrNull(detail.Director),

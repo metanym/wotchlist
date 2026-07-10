@@ -173,7 +173,7 @@ export function SearchView() {
                       {formatRuntime(result.runtimeMinutes)}
                     </Badge>
                   )}
-                  {result.contentRating && (
+                  {result.type === "MOVIE" && result.contentRating && (
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
                       {result.contentRating}
                     </Badge>

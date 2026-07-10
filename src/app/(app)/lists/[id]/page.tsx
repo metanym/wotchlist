@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { canEdit } from "@/lib/lists";
+import { canEdit, getUserLists } from "@/lib/lists";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Users } from "lucide-react";
 import { ListDetailView } from "./list-detail-view";
+import { ListSwitcher } from "@/components/list-switcher";
 
 export default async function ListDetailPage({
   params,
@@ -35,14 +36,16 @@ export default async function ListDetailPage({
   });
   if (!list) notFound();
 
+  const lists = await getUserLists(session.user.id);
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">{list.name}</h1>
+            <ListSwitcher lists={lists} currentListId={id} currentListName={list.name} />
             {list.type === "SHARED" && (
-              <Badge variant="secondary" className="gap-1">
+              <Badge variant="secondary" className="gap-1 shrink-0">
                 <Users className="size-3" />
                 Shared
               </Badge>

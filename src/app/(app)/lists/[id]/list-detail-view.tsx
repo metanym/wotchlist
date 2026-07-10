@@ -25,7 +25,14 @@ import type { ListItem, Review, Title, User } from "@prisma/client";
 
 type ItemWithTitle = ListItem & { title: Title; reviews: (Review & { user: User })[] };
 
-type SortKey = "dateAdded" | "title" | "rating" | "priority";
+type SortKey = "dateAdded" | "title" | "rating" | "priority" | "watchingFirst";
+
+const WATCHING_FIRST_ORDER: Record<string, number> = {
+  WATCHING: 0,
+  UNWATCHED: 1,
+  WATCHED: 2,
+  DROPPED: 2,
+};
 
 const VIEW_MODE_KEY = "wotchlist:view-mode";
 
@@ -96,6 +103,12 @@ export function ListDetailView({
           return Number(b.title.imdbRating ?? 0) - Number(a.title.imdbRating ?? 0);
         case "priority":
           return (a.priority ?? 99) - (b.priority ?? 99);
+        case "watchingFirst": {
+          const order =
+            (WATCHING_FIRST_ORDER[a.watchStatus] ?? 3) - (WATCHING_FIRST_ORDER[b.watchStatus] ?? 3);
+          if (order !== 0) return order;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        }
         default:
           return b.createdAt.getTime() - a.createdAt.getTime();
       }
@@ -277,6 +290,7 @@ export function ListDetailView({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dateAdded">Date added</SelectItem>
+                  <SelectItem value="watchingFirst">Watching first</SelectItem>
                   <SelectItem value="title">Title</SelectItem>
                   <SelectItem value="rating">IMDb rating</SelectItem>
                   <SelectItem value="priority">Priority</SelectItem>

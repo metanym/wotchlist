@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { SignInForm } from "./signin-form";
 import { signInWithFacebook } from "./actions";
 
+// Hidden while Facebook app verification/business-portfolio options are
+// being decided — backend (provider config, action) stays in place.
+const SHOW_FACEBOOK_LOGIN = false;
+
 export default async function SignInPage() {
   const session = await auth();
   if (session) {
@@ -21,22 +25,26 @@ export default async function SignInPage() {
       <div className="flex w-full max-w-sm flex-col gap-4">
         <SignInForm />
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-xs text-muted-foreground">or</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
+        {SHOW_FACEBOOK_LOGIN && (
+          <>
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
 
-        <form action={signInWithFacebook}>
-          <Button
-            type="submit"
-            variant="outline"
-            className="h-11 w-full gap-2 border-[#1877F2]/40 text-[#1877F2] hover:bg-[#1877F2]/10 hover:text-[#1877F2]"
-          >
-            <FacebookIcon className="size-4" />
-            Continue with Facebook
-          </Button>
-        </form>
+            <form action={signInWithFacebook}>
+              <Button
+                type="submit"
+                variant="outline"
+                className="h-11 w-full gap-2 border-[#1877F2]/40 text-[#1877F2] hover:bg-[#1877F2]/10 hover:text-[#1877F2]"
+              >
+                <FacebookIcon className="size-4" />
+                Continue with Facebook
+              </Button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

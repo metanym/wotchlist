@@ -70,6 +70,17 @@ export default function HelpPage() {
         </p>
       </div>
 
+      <Link
+        href="/changelog"
+        className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-foreground/20"
+      >
+        <ScrollText className="size-5 shrink-0 text-muted-foreground" />
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-medium">What&apos;s new</p>
+          <p className="text-sm text-muted-foreground">See the changelog for recent updates.</p>
+        </div>
+      </Link>
+
       <div className="flex flex-col gap-4">
         {sections.map(({ icon: Icon, title, body }) => (
           <div key={title} className="flex gap-3 rounded-lg border border-border p-3">
@@ -81,17 +92,6 @@ export default function HelpPage() {
           </div>
         ))}
       </div>
-
-      <Link
-        href="/changelog"
-        className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-foreground/20"
-      >
-        <ScrollText className="size-5 shrink-0 text-muted-foreground" />
-        <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium">What&apos;s new</p>
-          <p className="text-sm text-muted-foreground">See the changelog for recent updates.</p>
-        </div>
-      </Link>
     </div>
   );
 }

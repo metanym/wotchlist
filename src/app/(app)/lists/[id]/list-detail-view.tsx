@@ -21,9 +21,14 @@ import {
 import { ListItemCard } from "@/components/list-item-card";
 import { STREAMING_SERVICES, WATCH_STATUS_LABELS } from "@/lib/constants";
 import { LayoutGrid, List as ListIcon, ListVideo, SlidersHorizontal } from "lucide-react";
-import type { ListItem, Review, Title, User } from "@prisma/client";
+import type { ListItem, ListType, Reminder, Review, Title, User } from "@prisma/client";
 
-type ItemWithTitle = ListItem & { title: Title; reviews: (Review & { user: User })[] };
+type ItemWithTitle = ListItem & {
+  title: Title;
+  reviews: (Review & { user: User })[];
+  addedBy: User;
+  reminders: Reminder[];
+};
 
 type SortKey = "dateAdded" | "title" | "rating" | "priority" | "watchingFirst";
 
@@ -50,10 +55,12 @@ export function ListDetailView({
   items,
   canEdit,
   currentUserId,
+  listType,
 }: {
   items: ItemWithTitle[];
   canEdit: boolean;
   currentUserId: string;
+  listType: ListType;
 }) {
   const [tab, setTab] = useState<"active" | "archive">("active");
   const [compact, setCompact] = useState(false);
@@ -199,6 +206,7 @@ export function ListDetailView({
               canEdit={canEdit}
               compact
               currentUserId={currentUserId}
+              listType={listType}
             />
           ))}
         </div>
@@ -211,6 +219,7 @@ export function ListDetailView({
               canEdit={canEdit}
               compact={false}
               currentUserId={currentUserId}
+              listType={listType}
             />
           ))}
         </div>

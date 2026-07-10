@@ -29,7 +29,9 @@ export default async function ListDetailPage({
       items: {
         include: {
           title: true,
+          addedBy: true,
           reviews: { include: { user: true }, orderBy: { createdAt: "desc" } },
+          reminders: { where: { userId: session.user.id } },
         },
       },
     },
@@ -68,6 +70,7 @@ export default async function ListDetailPage({
         items={list.items}
         canEdit={canEdit(membership.role)}
         currentUserId={session.user.id}
+        listType={list.type}
       />
     </div>
   );

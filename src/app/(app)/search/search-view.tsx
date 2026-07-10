@@ -12,6 +12,7 @@ import { searchAction } from "./actions";
 import { AddToListSheet } from "@/components/add-to-list/add-to-list-sheet";
 import { TitleInfoDialog } from "@/components/title-info-dialog";
 import { STREAMING_SERVICE_COLORS } from "@/lib/constants";
+import { formatRuntime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function SearchView() {
@@ -165,6 +166,16 @@ export function SearchView() {
                       {result.totalSeasons}
                       {result.totalSeasons === "1" ? " Season" : " Seasons"}
                       {result.totalEpisodes ? ` · ${result.totalEpisodes} Ep` : ""}
+                    </Badge>
+                  )}
+                  {result.type === "MOVIE" && result.runtimeMinutes && (
+                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                      {formatRuntime(result.runtimeMinutes)}
+                    </Badge>
+                  )}
+                  {result.contentRating && (
+                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                      {result.contentRating}
                     </Badge>
                   )}
                 </div>

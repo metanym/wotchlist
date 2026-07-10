@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id                 String         @id @default(cuid())
-  email              String         @unique
-  emailVerified      DateTime?
-  displayName        String?
-  notifyOnItemAdded  Boolean        @default(true)
-  createdAt          DateTime       @default(now())
-  lists              List[]
-  memberships        ListMember[]
-  sessions           Session[]
-  accounts           Account[]
-  reviews            Review[]
-  notifications      Notification[] @relation("NotificationRecipient")
+  id                     String         @id @default(cuid())
+  email                  String         @unique
+  emailVerified          DateTime?
+  displayName            String?
+  notifyOnItemAdded      Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  lists                  List[]
+  memberships            ListMember[]
+  sessions               Session[]
+  accounts               Account[]
+  reviews                Review[]
+  notifications          Notification[] @relation("NotificationRecipient")
   triggeredNotifications Notification[] @relation("NotificationActor")
+  addedItems             ListItem[]     @relation("ItemAddedBy")
+  reminders              Reminder[]
 }
 
 model List {
@@ -63,22 +65,24 @@ enum MemberRole {
 }
 
 model Title {
-  id            String     @id @default(cuid())
-  imdbId        String     @unique
-  title         String
-  year          String?
-  type          TitleType
-  posterUrl     String?
-  plot          String?
-  imdbRating    String?
-  rtScore       String?
-  genre         String?
-  director      String?
-  actors        String?
-  totalSeasons  String?
-  totalEpisodes Int?
-  metaFetchedAt DateTime?
-  listItems     ListItem[]
+  id             String     @id @default(cuid())
+  imdbId         String     @unique
+  title          String
+  year           String?
+  type           TitleType
+  posterUrl      String?
+  plot           String?
+  imdbRating     String?
+  rtScore        String?
+  contentRating  String?
+  runtimeMinutes Int?
+  genre          String?
+  director       String?
+  actors         String?
+  totalSeasons   String?
+  totalEpisodes  Int?
+  metaFetchedAt  DateTime?
+  listItems      ListItem[]
 }
 
 enum TitleType {
@@ -93,6 +97,7 @@ model ListItem {
   list             List        @relation(fields: [listId], references: [id], onDelete: Cascade)
   title            Title       @relation(fields: [titleId], references: [id])
   addedById        String
+  addedBy          User        @relation("ItemAddedBy", fields: [addedById], references: [id])
   recommendedBy    String?
   streamingService String?
   allEpisodesAvail Boolean?
@@ -106,6 +111,7 @@ model ListItem {
   updatedAt        DateTime    @updatedAt
   reviews          Review[]
   notifications    Notification[]
+  reminders        Reminder[]
 
   @@unique([listId, titleId])
   @@index([titleId])
@@ -151,6 +157,22 @@ model Notification {
 
 enum NotificationType {
   ITEM_ADDED
+  REMINDER
+}
+
+model Reminder {
+  id         String    @id @default(cuid())
+  listItemId String
+  listItem   ListItem  @relation(fields: [listItemId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  remindAt   DateTime
+  note       String?
+  firedAt    DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@unique([listItemId, userId])
+  @@index([remindAt, firedAt])
 }
 
 // NextAuth.js models (email/magic-link provider)

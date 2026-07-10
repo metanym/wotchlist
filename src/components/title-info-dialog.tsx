@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Film, Star } from "lucide-react";
+import { formatRuntime } from "@/lib/format";
 
 export interface TitleInfo {
   title: string;
@@ -21,6 +22,8 @@ export interface TitleInfo {
   actors: string | null;
   imdbRating: string | null;
   rtScore: string | null;
+  contentRating: string | null;
+  runtimeMinutes: number | null;
   totalSeasons: string | null;
   totalEpisodes: number | null;
 }
@@ -71,6 +74,13 @@ export function TitleInfoDialog({
               {info.type === "SERIES" && info.totalEpisodes && (
                 <> · {info.totalEpisodes} Episodes</>
               )}
+              {info.runtimeMinutes && (
+                <>
+                  {" · "}
+                  {formatRuntime(info.runtimeMinutes)}
+                  {info.type === "SERIES" ? " per episode" : ""}
+                </>
+              )}
             </p>
             <div className="flex flex-wrap items-center gap-1.5">
               {info.imdbRating && (
@@ -82,6 +92,11 @@ export function TitleInfoDialog({
               {info.rtScore && (
                 <Badge variant="outline" className="text-[10px]">
                   🍅 {info.rtScore}
+                </Badge>
+              )}
+              {info.contentRating && (
+                <Badge variant="outline" className="text-[10px]">
+                  {info.contentRating}
                 </Badge>
               )}
             </div>

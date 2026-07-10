@@ -5,6 +5,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,14 +17,16 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EditItemSheet } from "@/components/edit-item-sheet";
 import { TitleInfoDialog } from "@/components/title-info-dialog";
 import { ReviewsDialog } from "@/components/reviews-dialog";
+import { ReminderDialog } from "@/components/reminder-dialog";
 import {
   STREAMING_SERVICE_COLORS,
   PRIORITY_LABELS,
   WATCH_STATUS_LABELS,
 } from "@/lib/constants";
+import { formatRuntime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { setWatchStatus, toggleArchived, deleteItem } from "@/app/(app)/lists/[id]/item-actions";
-import type { ListItem, Review, Title, User, WatchStatus } from "@prisma/client";
+import type { ListItem, ListType, Reminder, Review, Title, User, WatchStatus } from "@prisma/client";
 import {
   Film,
   MoreVertical,
@@ -37,9 +40,15 @@ import {
   Clock,
   PlayCircle,
   MessageSquare,
+  BellRing,
 } from "lucide-react";
 
-type ItemWithTitle = ListItem & { title: Title; reviews: (Review & { user: User })[] };
+type ItemWithTitle = ListItem & {
+  title: Title;
+  reviews: (Review & { user: User })[];
+  addedBy: User;
+  reminders: Reminder[];
+};
 
 const STATUS_DOT: Record<WatchStatus, string> = {
   UNWATCHED: "bg-zinc-500",
@@ -53,24 +62,33 @@ function averageRating(reviews: Review[]) {
   return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 }
 
+function displayName(user: User) {
+  return user.displayName ?? user.email;
+}
+
 export function ListItemCard({
   item,
   canEdit,
   compact,
   currentUserId,
+  listType,
 }: {
   item: ItemWithTitle;
   canEdit: boolean;
   compact: boolean;
   currentUserId: string;
+  listType: ListType;
 }) {
   const [, startTransition] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
 
   const avgRating = averageRating(item.reviews);
+  const myReminder = item.reminders[0] ?? null;
+  const showAddedBy = listType === "SHARED";
 
   function onStatusChange(status: WatchStatus) {
     startTransition(async () => {
@@ -110,6 +128,14 @@ export function ListItemCard({
         open={reviewsOpen}
         onOpenChange={setReviewsOpen}
       />
+      <ReminderDialog
+        listId={item.listId}
+        itemId={item.id}
+        itemTitle={item.title.title}
+        existingReminder={myReminder}
+        open={reminderOpen}
+        onOpenChange={setReminderOpen}
+      />
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -148,6 +174,7 @@ export function ListItemCard({
           <div className="flex items-center gap-1.5">
             <span className={cn("size-2 rounded-full", STATUS_DOT[item.watchStatus])} />
             <p className="truncate text-sm font-medium">{item.title.title}</p>
+            {myReminder && <BellRing className="size-3 shrink-0 text-amber-500" />}
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {item.title.year} · {item.streamingService ?? "No service set"}
@@ -155,20 +182,35 @@ export function ListItemCard({
             {item.title.type === "SERIES" && item.title.totalEpisodes
               ? ` · ${item.title.totalEpisodes} Ep`
               : ""}
+            {item.title.type === "MOVIE" && item.title.runtimeMinutes
+              ? ` · ${formatRuntime(item.title.runtimeMinutes)}`
+              : ""}
           </p>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setInfoOpen(true)} className="text-muted-foreground">
               <Info className="size-3.5" />
             </button>
             {reviewsTrigger}
+            {showAddedBy && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Avatar className="size-4">
+                  <AvatarFallback className="text-[8px]">
+                    {displayName(item.addedBy).slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {displayName(item.addedBy)}
+              </span>
+            )}
           </div>
         </div>
         <ItemMenu
           item={item}
           canEdit={canEdit}
+          hasReminder={!!myReminder}
           onStatusChange={onStatusChange}
           onToggleArchive={onToggleArchive}
           onEdit={() => setEditOpen(true)}
+          onReminder={() => setReminderOpen(true)}
           onDeleteRequest={() => setDeleteOpen(true)}
         />
         {dialogs}
@@ -204,9 +246,11 @@ export function ListItemCard({
           <ItemMenu
             item={item}
             canEdit={canEdit}
+            hasReminder={!!myReminder}
             onStatusChange={onStatusChange}
             onToggleArchive={onToggleArchive}
             onEdit={() => setEditOpen(true)}
+            onReminder={() => setReminderOpen(true)}
             onDeleteRequest={() => setDeleteOpen(true)}
           />
         </div>
@@ -232,6 +276,11 @@ export function ListItemCard({
             <span className="text-[9px] font-medium">Season {item.currentSeason}</span>
           </div>
         )}
+        {myReminder && (
+          <div className="absolute bottom-1.5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
+            <BellRing className="size-3 text-amber-500" />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5 px-3">
@@ -250,6 +299,11 @@ export function ListItemCard({
               🍅 {item.title.rtScore}
             </Badge>
           )}
+          {item.title.contentRating && (
+            <Badge variant="outline" className="text-[10px]">
+              {item.title.contentRating}
+            </Badge>
+          )}
           {item.priority && (
             <Badge variant="outline" className="text-[10px]">
               {PRIORITY_LABELS[item.priority]}
@@ -260,6 +314,11 @@ export function ListItemCard({
               {item.title.totalSeasons}
               {item.title.totalSeasons === "1" ? " Season" : " Seasons"}
               {item.title.totalEpisodes ? ` · ${item.title.totalEpisodes} Ep` : ""}
+            </Badge>
+          )}
+          {item.title.type === "MOVIE" && item.title.runtimeMinutes && (
+            <Badge variant="outline" className="text-[10px]">
+              {formatRuntime(item.title.runtimeMinutes)}
             </Badge>
           )}
         </div>
@@ -283,6 +342,19 @@ export function ListItemCard({
         {item.recommendedBy && (
           <p className="truncate text-xs text-muted-foreground">Rec by {item.recommendedBy}</p>
         )}
+
+        {showAddedBy && (
+          <div className="flex items-center gap-1.5">
+            <Avatar className="size-5">
+              <AvatarFallback className="text-[9px]">
+                {displayName(item.addedBy).slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <p className="truncate text-xs text-muted-foreground">
+              Added by {displayName(item.addedBy)}
+            </p>
+          </div>
+        )}
       </div>
 
       {dialogs}
@@ -293,20 +365,22 @@ export function ListItemCard({
 function ItemMenu({
   item,
   canEdit,
+  hasReminder,
   onStatusChange,
   onToggleArchive,
   onEdit,
+  onReminder,
   onDeleteRequest,
 }: {
   item: ItemWithTitle;
   canEdit: boolean;
+  hasReminder: boolean;
   onStatusChange: (status: WatchStatus) => void;
   onToggleArchive: () => void;
   onEdit: () => void;
+  onReminder: () => void;
   onDeleteRequest: () => void;
 }) {
-  if (!canEdit) return null;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -319,34 +393,43 @@ function ItemMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {(["UNWATCHED", "WATCHING", "WATCHED", "DROPPED"] as WatchStatus[])
-          .filter((s) => s !== item.watchStatus)
-          .map((status) => (
-            <DropdownMenuItem key={status} onClick={() => onStatusChange(status)}>
-              Mark as {WATCH_STATUS_LABELS[status]}
+        {canEdit &&
+          (["UNWATCHED", "WATCHING", "WATCHED", "DROPPED"] as WatchStatus[])
+            .filter((s) => s !== item.watchStatus)
+            .map((status) => (
+              <DropdownMenuItem key={status} onClick={() => onStatusChange(status)}>
+                Mark as {WATCH_STATUS_LABELS[status]}
+              </DropdownMenuItem>
+            ))}
+        <DropdownMenuItem onClick={onReminder}>
+          <BellRing className="size-4" />
+          {hasReminder ? "Edit reminder" : "Set reminder"}
+        </DropdownMenuItem>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="size-4" />
+              Edit details
             </DropdownMenuItem>
-          ))}
-        <DropdownMenuItem onClick={onEdit}>
-          <Pencil className="size-4" />
-          Edit details
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onToggleArchive}>
-          {item.archivedAt ? (
-            <>
-              <ArchiveRestore className="size-4" />
-              Restore
-            </>
-          ) : (
-            <>
-              <Archive className="size-4" />
-              Archive
-            </>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={onDeleteRequest}>
-          <Trash2 className="size-4" />
-          Remove
-        </DropdownMenuItem>
+            <DropdownMenuItem onClick={onToggleArchive}>
+              {item.archivedAt ? (
+                <>
+                  <ArchiveRestore className="size-4" />
+                  Restore
+                </>
+              ) : (
+                <>
+                  <Archive className="size-4" />
+                  Archive
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={onDeleteRequest}>
+              <Trash2 className="size-4" />
+              Remove
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

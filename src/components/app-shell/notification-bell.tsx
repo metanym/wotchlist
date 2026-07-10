@@ -22,6 +22,27 @@ function actorName(actor: NotificationList[number]["actor"]) {
   return actor.displayName ?? actor.email;
 }
 
+function NotificationText({ n }: { n: NotificationList[number] }) {
+  const titleName = n.listItem?.title.title ?? "a title";
+
+  if (n.type === "REMINDER") {
+    return (
+      <p className="text-sm">
+        Reminder: <span className="font-medium">{titleName}</span> in{" "}
+        <span className="font-medium">{n.list.name}</span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-sm">
+      <span className="font-medium">{actorName(n.actor)}</span> added{" "}
+      <span className="font-medium">{titleName}</span> to{" "}
+      <span className="font-medium">{n.list.name}</span>
+    </p>
+  );
+}
+
 function timeAgo(date: Date) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -95,13 +116,7 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
               >
                 {!n.read && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-red-500" />}
                 <div className={n.read ? "flex-1 pl-4" : "flex-1"}>
-                  <p className="text-sm">
-                    <span className="font-medium">{actorName(n.actor)}</span> added{" "}
-                    <span className="font-medium">
-                      {n.listItem?.title.title ?? "a title"}
-                    </span>{" "}
-                    to <span className="font-medium">{n.list.name}</span>
-                  </p>
+                  <NotificationText n={n} />
                   <p className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</p>
                 </div>
               </Link>

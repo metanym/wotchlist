@@ -17,6 +17,8 @@ export interface OmdbSearchResult {
   actors: string | null;
   imdbRating: string | null;
   rtScore: string | null;
+  contentRating: string | null;
+  runtimeMinutes: number | null;
   totalSeasons: string | null;
   totalEpisodes: number | null;
   allEpisodesAvailable: boolean | null;
@@ -47,6 +49,8 @@ interface OmdbDetailResponse {
   Director: string;
   Actors: string;
   imdbRating: string;
+  Rated?: string;
+  Runtime?: string;
   totalSeasons?: string;
   Ratings?: Array<{ Source: string; Value: string }>;
 }
@@ -65,6 +69,12 @@ function omdbApiKey() {
 
 function textOrNull(value: string | undefined) {
   return value && value !== "N/A" ? value : null;
+}
+
+function parseRuntimeMinutes(value: string | undefined): number | null {
+  if (!value) return null;
+  const match = value.match(/\d+/);
+  return match ? Number(match[0]) : null;
 }
 
 export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
@@ -103,6 +113,8 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
       actors: detail ? textOrNull(detail.Actors) : null,
       imdbRating: detail && detail.imdbRating !== "N/A" ? detail.imdbRating : null,
       rtScore: detail ? rtScoreFrom(detail.Ratings) : null,
+      contentRating: detail ? textOrNull(detail.Rated) : null,
+      runtimeMinutes: detail ? parseRuntimeMinutes(detail.Runtime) : null,
       totalSeasons: detail?.totalSeasons ?? null,
       totalEpisodes: enrichment.numberOfEpisodes,
       allEpisodesAvailable: enrichment.allEpisodesAvailable,
@@ -155,6 +167,8 @@ export async function upsertTitle(imdbId: string) {
     plot: textOrNull(detail.Plot),
     imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
     rtScore: rtScoreFrom(detail.Ratings),
+    contentRating: textOrNull(detail.Rated),
+    runtimeMinutes: parseRuntimeMinutes(detail.Runtime),
     genre: textOrNull(detail.Genre),
     director: textOrNull(detail.Director),
     actors: textOrNull(detail.Actors),

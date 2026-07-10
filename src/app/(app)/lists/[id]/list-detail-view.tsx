@@ -35,6 +35,8 @@ const WATCHING_FIRST_ORDER: Record<string, number> = {
 };
 
 const VIEW_MODE_KEY = "wotchlist:view-mode";
+const SORT_KEY = "wotchlist:sort-order";
+const VALID_SORT_KEYS: SortKey[] = ["dateAdded", "title", "rating", "priority", "watchingFirst"];
 
 const DEFAULT_FILTERS = {
   status: "all",
@@ -64,13 +66,23 @@ export function ListDetailView({
   const [sort, setSort] = useState<SortKey>("dateAdded");
 
   useEffect(() => {
-    const stored = localStorage.getItem(VIEW_MODE_KEY);
-    if (stored === "compact") setCompact(true);
+    const storedView = localStorage.getItem(VIEW_MODE_KEY);
+    if (storedView === "compact") setCompact(true);
+
+    const storedSort = localStorage.getItem(SORT_KEY);
+    if (storedSort && VALID_SORT_KEYS.includes(storedSort as SortKey)) {
+      setSort(storedSort as SortKey);
+    }
   }, []);
 
   function updateCompact(next: boolean) {
     setCompact(next);
     localStorage.setItem(VIEW_MODE_KEY, next ? "compact" : "grid");
+  }
+
+  function updateSort(next: SortKey) {
+    setSort(next);
+    localStorage.setItem(SORT_KEY, next);
   }
 
   const activeItems = items.filter((i) => !i.archivedAt);
@@ -284,7 +296,7 @@ export function ListDetailView({
             </FilterField>
 
             <FilterField label="Sort by">
-              <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+              <Select value={sort} onValueChange={(v) => updateSort(v as SortKey)}>
                 <SelectTrigger className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>

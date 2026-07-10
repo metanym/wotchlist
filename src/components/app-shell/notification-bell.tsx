@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { toast } from "sonner";
+import { Bell, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -13,6 +14,7 @@ import {
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  deleteNotification,
 } from "@/app/(app)/notifications/actions";
 
 type NotificationList = Awaited<ReturnType<typeof getNotifications>>;
@@ -85,6 +87,16 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
     }
   }
 
+  function onDelete(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    startTransition(async () => {
+      const result = await deleteNotification(id);
+      if (result?.error) toast.error(result.error);
+    });
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <button
@@ -122,6 +134,14 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
                   <NotificationText n={n} />
                   <p className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => onDelete(e, n.id)}
+                  aria-label="Delete notification"
+                  className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="size-4" />
+                </button>
               </Link>
             ))
           )}

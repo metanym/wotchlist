@@ -100,6 +100,15 @@ export function ReminderDialog({
 
         <form action={onSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
+            <Label htmlFor="note">Note (optional)</Label>
+            <Textarea
+              id="note"
+              name="note"
+              placeholder={`e.g. "Watch this Friday night" or "Check if all episodes are out yet"`}
+              defaultValue={existingReminder?.note ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
             <Label htmlFor="remindAt">Remind me on</Label>
             <Input
               id="remindAt"
@@ -121,15 +130,6 @@ export function ReminderDialog({
               </button>
             )}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="note">Note (optional)</Label>
-            <Textarea
-              id="note"
-              name="note"
-              placeholder={`e.g. "Watch this Friday night" or "Check if all episodes are out yet"`}
-              defaultValue={existingReminder?.note ?? ""}
-            />
-          </div>
           <div className="flex gap-2">
             <Button type="submit" className="h-11 flex-1" disabled={isPending}>
               {isPending ? "Saving…" : existingReminder ? "Update reminder" : "Set reminder"}
@@ -142,7 +142,7 @@ export function ReminderDialog({
                 disabled={isCancelling}
                 onClick={onCancel}
               >
-                Cancel reminder
+                Delete reminder
               </Button>
             )}
           </div>

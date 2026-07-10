@@ -54,3 +54,24 @@ export async function markAllNotificationsRead() {
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+export async function deleteNotification(id: string) {
+  const session = await auth();
+  if (!session) return { error: "You need to sign in." };
+
+  const notification = await db().notification.findUnique({ where: { id } });
+  if (!notification || notification.userId !== session.user.id) {
+    return { error: "Notification not found." };
+  }
+
+  if (notification.type === "REMINDER" && notification.listItemId) {
+    await db().reminder.deleteMany({
+      where: { listItemId: notification.listItemId, userId: session.user.id },
+    });
+  }
+
+  await db().notification.delete({ where: { id } });
+
+  revalidatePath(`/lists/${notification.listId}`);
+  return { success: true };
+}

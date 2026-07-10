@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Search,
   ListPlus,
@@ -6,6 +7,9 @@ import {
   SlidersHorizontal,
   Archive,
   Info,
+  BellRing,
+  Bell,
+  ScrollText,
 } from "lucide-react";
 
 const sections = [
@@ -44,6 +48,16 @@ const sections = [
     title: "Share a list",
     body: "Open a list's Settings and invite someone by email — this also turns a personal list into a shared one. Choose Editor (can add/edit items) or Viewer (read-only), and change or remove members any time.",
   },
+  {
+    icon: BellRing,
+    title: "Set a reminder",
+    body: "Use the ⋮ menu on a card to set a personal reminder — to watch something on a date, or to check back on availability. For a still-airing series, we'll suggest an estimated date when all episodes should be out.",
+  },
+  {
+    icon: Bell,
+    title: "Notifications",
+    body: "The bell icon shows you when someone adds something to a shared list, and when your reminders come due. Turn item-added alerts off any time in Settings.",
+  },
 ];
 
 export default function HelpPage() {
@@ -67,6 +81,17 @@ export default function HelpPage() {
           </div>
         ))}
       </div>
+
+      <Link
+        href="/changelog"
+        className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-foreground/20"
+      >
+        <ScrollText className="size-5 shrink-0 text-muted-foreground" />
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-medium">What&apos;s new</p>
+          <p className="text-sm text-muted-foreground">See the changelog for recent updates.</p>
+        </div>
+      </Link>
     </div>
   );
 }

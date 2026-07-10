@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOutAction } from "@/app/(app)/actions";
+import { NotificationBell } from "@/components/app-shell/notification-bell";
 
 function initials(name: string) {
   return name
@@ -22,8 +23,10 @@ function initials(name: string) {
 
 export function AppHeader({
   user,
+  initialUnreadCount,
 }: {
   user: { displayName: string | null; email?: string | null };
+  initialUnreadCount: number;
 }) {
   const name = user.displayName ?? user.email ?? "?";
 
@@ -33,29 +36,32 @@ export function AppHeader({
         <Clapperboard className="size-5" />
         Wotchlist
       </Link>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex size-9 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
-            <Avatar className="size-9">
-              <AvatarFallback>{initials(name)}</AvatarFallback>
-            </Avatar>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/settings">Settings</Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <form action={signOutAction} className="w-full">
-              <button type="submit" className="w-full text-left">
-                Sign out
-              </button>
-            </form>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-1">
+        <NotificationBell initialUnreadCount={initialUnreadCount} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex size-9 items-center justify-center rounded-full outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+              <Avatar className="size-9">
+                <AvatarFallback>{initials(name)}</AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/settings">Settings</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <form action={signOutAction} className="w-full">
+                <button type="submit" className="w-full text-left">
+                  Sign out
+                </button>
+              </form>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }

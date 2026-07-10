@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { searchTitles, upsertTitle } from "@/lib/omdb";
 import { getMembership } from "@/lib/lists";
+import { notifyItemAdded } from "@/lib/notifications";
 
 export async function searchAction(query: string) {
   if (!query.trim()) return { results: [] as Awaited<ReturnType<typeof searchTitles>>, error: null as string | null };
@@ -76,8 +77,9 @@ export async function addToListAction(formData: FormData) {
   const currentSeason =
     title.type === "SERIES" && currentSeasonRaw ? Number(currentSeasonRaw) : null;
 
+  let item;
   try {
-    await db().listItem.create({
+    item = await db().listItem.create({
       data: {
         listId,
         titleId: title.id,
@@ -93,6 +95,8 @@ export async function addToListAction(formData: FormData) {
   } catch {
     return { error: "That title is already on this list." };
   }
+
+  await notifyItemAdded({ listId, listItemId: item.id, actorId: session.user.id });
 
   revalidatePath(`/lists/${listId}`);
   return { success: true };

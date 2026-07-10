@@ -19,3 +19,16 @@ export async function updateProfile(formData: FormData) {
   revalidatePath("/settings");
   return { success: true };
 }
+
+export async function updateNotifyOnItemAdded(notifyOnItemAdded: boolean) {
+  const session = await auth();
+  if (!session) return { error: "You need to sign in." };
+
+  await db().user.update({
+    where: { id: session.user.id },
+    data: { notifyOnItemAdded },
+  });
+
+  revalidatePath("/settings");
+  return { success: true };
+}

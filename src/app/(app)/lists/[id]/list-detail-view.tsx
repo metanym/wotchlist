@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
@@ -30,18 +30,35 @@ type ItemWithTitle = ListItem & {
   reminders: Reminder[];
 };
 
-type SortKey = "dateAdded" | "title" | "rating" | "priority" | "watchingFirst";
+type SortField = "dateAdded" | "title" | "rating" | "priority";
+type SortDirection = "asc" | "desc";
 
-const WATCHING_FIRST_ORDER: Record<string, number> = {
-  WATCHING: 0,
-  UNWATCHED: 1,
-  WATCHED: 2,
-  DROPPED: 2,
+const SORT_DIRECTION_LABELS: Record<SortField, [asc: string, desc: string]> = {
+  dateAdded: ["Oldest first", "Newest first"],
+  title: ["A–Z", "Z–A"],
+  rating: ["Low to high", "High to low"],
+  priority: ["High to low", "Low to high"],
 };
 
+function compareByField(a: ItemWithTitle, b: ItemWithTitle, field: SortField): number {
+  switch (field) {
+    case "title":
+      return a.title.title.localeCompare(b.title.title);
+    case "rating":
+      return Number(a.title.imdbRating ?? 0) - Number(b.title.imdbRating ?? 0);
+    case "priority":
+      return (a.priority ?? 99) - (b.priority ?? 99);
+    case "dateAdded":
+    default:
+      return a.createdAt.getTime() - b.createdAt.getTime();
+  }
+}
+
 const VIEW_MODE_KEY = "wotchlist:view-mode";
-const SORT_KEY = "wotchlist:sort-order";
-const VALID_SORT_KEYS: SortKey[] = ["dateAdded", "title", "rating", "priority", "watchingFirst"];
+const SORT_FIELD_KEY = "wotchlist:sort-field";
+const SORT_DIRECTION_KEY = "wotchlist:sort-direction";
+const VALID_SORT_FIELDS: SortField[] = ["dateAdded", "title", "rating", "priority"];
+const VALID_SORT_DIRECTIONS: SortDirection[] = ["asc", "desc"];
 
 const DEFAULT_FILTERS = {
   status: "all",
@@ -70,15 +87,21 @@ export function ListDetailView({
   const [priorityFilter, setPriorityFilter] = useState(DEFAULT_FILTERS.priority);
   const [typeFilter, setTypeFilter] = useState(DEFAULT_FILTERS.type);
   const [availableFilter, setAvailableFilter] = useState(DEFAULT_FILTERS.available);
-  const [sort, setSort] = useState<SortKey>("dateAdded");
+  const [sortField, setSortField] = useState<SortField>("dateAdded");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     const storedView = localStorage.getItem(VIEW_MODE_KEY);
     if (storedView === "compact") setCompact(true);
 
-    const storedSort = localStorage.getItem(SORT_KEY);
-    if (storedSort && VALID_SORT_KEYS.includes(storedSort as SortKey)) {
-      setSort(storedSort as SortKey);
+    const storedField = localStorage.getItem(SORT_FIELD_KEY);
+    if (storedField && VALID_SORT_FIELDS.includes(storedField as SortField)) {
+      setSortField(storedField as SortField);
+    }
+
+    const storedDirection = localStorage.getItem(SORT_DIRECTION_KEY);
+    if (storedDirection && VALID_SORT_DIRECTIONS.includes(storedDirection as SortDirection)) {
+      setSortDirection(storedDirection as SortDirection);
     }
   }, []);
 
@@ -87,9 +110,14 @@ export function ListDetailView({
     localStorage.setItem(VIEW_MODE_KEY, next ? "compact" : "grid");
   }
 
-  function updateSort(next: SortKey) {
-    setSort(next);
-    localStorage.setItem(SORT_KEY, next);
+  function updateSortField(next: SortField) {
+    setSortField(next);
+    localStorage.setItem(SORT_FIELD_KEY, next);
+  }
+
+  function updateSortDirection(next: SortDirection) {
+    setSortDirection(next);
+    localStorage.setItem(SORT_DIRECTION_KEY, next);
   }
 
   const activeItems = items.filter((i) => !i.archivedAt);
@@ -104,7 +132,7 @@ export function ListDetailView({
     availableFilter,
   ].filter((v) => v !== "all").length;
 
-  const filtered = useMemo(() => {
+  const { items: filtered, watchingCount } = useMemo(() => {
     let result = base;
     if (statusFilter !== "all") result = result.filter((i) => i.watchStatus === statusFilter);
     if (serviceFilter !== "all") result = result.filter((i) => i.streamingService === serviceFilter);
@@ -114,26 +142,18 @@ export function ListDetailView({
     if (availableFilter !== "all")
       result = result.filter((i) => String(i.allEpisodesAvail ?? "") === availableFilter);
 
-    result = [...result].sort((a, b) => {
-      switch (sort) {
-        case "title":
-          return a.title.title.localeCompare(b.title.title);
-        case "rating":
-          return Number(b.title.imdbRating ?? 0) - Number(a.title.imdbRating ?? 0);
-        case "priority":
-          return (a.priority ?? 99) - (b.priority ?? 99);
-        case "watchingFirst": {
-          const order =
-            (WATCHING_FIRST_ORDER[a.watchStatus] ?? 3) - (WATCHING_FIRST_ORDER[b.watchStatus] ?? 3);
-          if (order !== 0) return order;
-          return b.createdAt.getTime() - a.createdAt.getTime();
-        }
-        default:
-          return b.createdAt.getTime() - a.createdAt.getTime();
-      }
-    });
-    return result;
-  }, [base, statusFilter, serviceFilter, priorityFilter, typeFilter, availableFilter, sort]);
+    const comparator = (a: ItemWithTitle, b: ItemWithTitle) => {
+      const cmp = compareByField(a, b, sortField);
+      return sortDirection === "asc" ? cmp : -cmp;
+    };
+
+    const watching = result.filter((i) => i.watchStatus === "WATCHING").sort(comparator);
+    const rest = result.filter((i) => i.watchStatus !== "WATCHING").sort(comparator);
+
+    return { items: [...watching, ...rest], watchingCount: watching.length };
+  }, [base, statusFilter, serviceFilter, priorityFilter, typeFilter, availableFilter, sortField, sortDirection]);
+
+  const showSeparator = watchingCount > 0 && watchingCount < filtered.length;
 
   function resetFilters() {
     setStatusFilter(DEFAULT_FILTERS.status);
@@ -199,28 +219,36 @@ export function ListDetailView({
         </div>
       ) : compact ? (
         <div className="flex flex-col gap-2">
-          {filtered.map((item) => (
-            <ListItemCard
-              key={item.id}
-              item={item}
-              canEdit={canEdit}
-              compact
-              currentUserId={currentUserId}
-              listType={listType}
-            />
+          {filtered.map((item, idx) => (
+            <Fragment key={item.id}>
+              {showSeparator && idx === watchingCount && (
+                <div className="my-1 border-t border-border" />
+              )}
+              <ListItemCard
+                item={item}
+                canEdit={canEdit}
+                compact
+                currentUserId={currentUserId}
+                listType={listType}
+              />
+            </Fragment>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {filtered.map((item) => (
-            <ListItemCard
-              key={item.id}
-              item={item}
-              canEdit={canEdit}
-              compact={false}
-              currentUserId={currentUserId}
-              listType={listType}
-            />
+          {filtered.map((item, idx) => (
+            <Fragment key={item.id}>
+              {showSeparator && idx === watchingCount && (
+                <div className="col-span-full my-1 border-t border-border" />
+              )}
+              <ListItemCard
+                item={item}
+                canEdit={canEdit}
+                compact={false}
+                currentUserId={currentUserId}
+                listType={listType}
+              />
+            </Fragment>
           ))}
         </div>
       )}
@@ -305,16 +333,30 @@ export function ListDetailView({
             </FilterField>
 
             <FilterField label="Sort by">
-              <Select value={sort} onValueChange={(v) => updateSort(v as SortKey)}>
+              <Select value={sortField} onValueChange={(v) => updateSortField(v as SortField)}>
                 <SelectTrigger className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="dateAdded">Date added</SelectItem>
-                  <SelectItem value="watchingFirst">Watching first</SelectItem>
                   <SelectItem value="title">Title</SelectItem>
                   <SelectItem value="rating">IMDb rating</SelectItem>
                   <SelectItem value="priority">Priority</SelectItem>
+                </SelectContent>
+              </Select>
+            </FilterField>
+
+            <FilterField label="Order">
+              <Select
+                value={sortDirection}
+                onValueChange={(v) => updateSortDirection(v as SortDirection)}
+              >
+                <SelectTrigger className="h-11 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">{SORT_DIRECTION_LABELS[sortField][0]}</SelectItem>
+                  <SelectItem value="desc">{SORT_DIRECTION_LABELS[sortField][1]}</SelectItem>
                 </SelectContent>
               </Select>
             </FilterField>

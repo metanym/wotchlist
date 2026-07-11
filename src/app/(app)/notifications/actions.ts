@@ -20,6 +20,17 @@ export async function getNotifications() {
   });
 }
 
+export async function getUpcomingReminders() {
+  const session = await auth();
+  if (!session) return [];
+
+  return db().reminder.findMany({
+    where: { userId: session.user.id, firedAt: null },
+    include: { listItem: { include: { title: true, list: true } } },
+    orderBy: { remindAt: "asc" },
+  });
+}
+
 export async function getUnreadNotificationCount() {
   const session = await auth();
   if (!session) return 0;

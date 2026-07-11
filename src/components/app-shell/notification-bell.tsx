@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Bell, X } from "lucide-react";
+import { Bell, Clock, X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -12,12 +12,15 @@ import {
 } from "@/components/ui/sheet";
 import {
   getNotifications,
+  getUpcomingReminders,
   markAllNotificationsRead,
   markNotificationRead,
   deleteNotification,
 } from "@/app/(app)/notifications/actions";
+import { cancelReminder } from "@/app/(app)/lists/[id]/reminder-actions";
 
 type NotificationList = Awaited<ReturnType<typeof getNotifications>>;
+type UpcomingReminderList = Awaited<ReturnType<typeof getUpcomingReminders>>;
 
 function actorName(actor: NotificationList[number]["actor"]) {
   if (!actor) return "Someone";
@@ -48,6 +51,15 @@ function NotificationText({ n }: { n: NotificationList[number] }) {
   );
 }
 
+function formatReminderDate(date: Date) {
+  return new Date(date).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function timeAgo(date: Date) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -63,11 +75,13 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [notifications, setNotifications] = useState<NotificationList>([]);
+  const [upcomingReminders, setUpcomingReminders] = useState<UpcomingReminderList>([]);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (open) {
       getNotifications().then(setNotifications);
+      getUpcomingReminders().then(setUpcomingReminders);
     }
   }, [open]);
 
@@ -97,6 +111,16 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
     });
   }
 
+  function onCancelReminder(e: React.MouseEvent, reminder: UpcomingReminderList[number]) {
+    e.preventDefault();
+    e.stopPropagation();
+    setUpcomingReminders((prev) => prev.filter((r) => r.id !== reminder.id));
+    startTransition(async () => {
+      const result = await cancelReminder(reminder.listItem.listId, reminder.listItemId);
+      if (result?.error) toast.error(result.error);
+    });
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <button
@@ -117,6 +141,41 @@ export function NotificationBell({ initialUnreadCount }: { initialUnreadCount: n
         </SheetHeader>
 
         <div className="flex flex-col px-4 pb-4">
+          {upcomingReminders.length > 0 && (
+            <div className="mb-2 flex flex-col border-b border-border pb-2">
+              <p className="pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Upcoming reminders
+              </p>
+              {upcomingReminders.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/lists/${r.listItem.listId}`}
+                  className="flex items-start gap-2 py-2"
+                >
+                  <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm">
+                      <span className="font-medium">{r.listItem.title.title}</span> in{" "}
+                      <span className="font-medium">{r.listItem.list.name}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{formatReminderDate(r.remindAt)}</p>
+                    {r.note && (
+                      <p className="text-sm text-muted-foreground">&ldquo;{r.note}&rdquo;</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => onCancelReminder(e, r)}
+                    aria-label="Cancel reminder"
+                    className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </Link>
+              ))}
+            </div>
+          )}
+
           {notifications.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
               {isPending ? "Loading…" : "Nothing yet."}

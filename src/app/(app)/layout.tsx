@@ -22,7 +22,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <AppHeader user={session.user} initialUnreadCount={unreadCount} />
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-24 pt-4">{children}</main>
+      <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-24 pt-4 md:max-w-3xl lg:max-w-5xl">{children}</main>
       <BottomNav />
     </div>
   );

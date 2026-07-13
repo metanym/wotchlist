@@ -18,7 +18,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex max-w-lg items-stretch justify-around">
+      <div className="mx-auto flex max-w-lg items-stretch justify-around md:max-w-3xl lg:max-w-5xl">
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);
           return (

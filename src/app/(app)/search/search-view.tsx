@@ -66,7 +66,7 @@ export function SearchView() {
       </div>
 
       {isPending && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="aspect-2/3 w-full rounded-lg" />
           ))}
@@ -84,7 +84,7 @@ export function SearchView() {
       )}
 
       {!isPending && results.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {results.map((result) => (
             <div key={result.imdbId} className="flex flex-col gap-1.5">
               <div

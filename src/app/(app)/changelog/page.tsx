@@ -1,5 +1,12 @@
 const entries = [
   {
+    date: "13 July 2026",
+    items: [
+      "Reminders now also send you an email on the date you set, not just an in-app notification",
+      "Wotchlist now fills the screen on tablets and larger displays, with more titles per row",
+    ],
+  },
+  {
     date: "10 July 2026",
     items: [
       "Get notified when someone adds something to a shared list",
@@ -7,7 +14,7 @@ const entries = [
       "Content ratings now show real UK certificates (12A, 15, U) for movies",
       "Runtime shown on movies",
       "Shared-list cards show who added each title",
-      "New \"Watching first\" sort option, and your sort/view choices are now remembered",
+      "\"Watching\" items always show first, with your chosen sort order applied within Watching and then the rest — remembered between visits",
       "Jump straight between lists from the list title",
     ],
   },

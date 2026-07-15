@@ -22,6 +22,7 @@ export interface OmdbSearchResult {
   totalSeasons: string | null;
   totalEpisodes: number | null;
   allEpisodesAvailable: boolean | null;
+  airingSeasonNumber: number | null;
   streamingServices: string[];
 }
 
@@ -121,6 +122,7 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
       totalSeasons: detail?.totalSeasons ?? null,
       totalEpisodes: enrichment.numberOfEpisodes,
       allEpisodesAvailable: enrichment.allEpisodesAvailable,
+      airingSeasonNumber: enrichment.airingSeasonNumber,
       streamingServices: enrichment.streamingServices,
     };
   });
@@ -178,6 +180,7 @@ export async function upsertTitle(imdbId: string) {
     actors: textOrNull(detail.Actors),
     totalSeasons: detail.totalSeasons,
     totalEpisodes: enrichment.numberOfEpisodes,
+    airingSeasonNumber: enrichment.airingSeasonNumber,
     metaFetchedAt: new Date(),
   };
 

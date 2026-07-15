@@ -137,7 +137,11 @@ export function SearchView() {
                         <Clock className="size-3 text-amber-500" />
                       )}
                       <span className="text-[9px] font-medium">
-                        {result.allEpisodesAvailable ? "All available" : "Still airing"}
+                        {result.allEpisodesAvailable
+                          ? "All available"
+                          : result.airingSeasonNumber
+                            ? `S${result.airingSeasonNumber} airing`
+                            : "Still airing"}
                       </span>
                     </div>
                   )}

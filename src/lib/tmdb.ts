@@ -76,6 +76,7 @@ export interface TmdbEnrichment {
   numberOfEpisodes: number | null;
   numberOfSeasons: number | null;
   allEpisodesAvailable: boolean | null;
+  airingSeasonNumber: number | null;
   ukCertification: string | null;
 }
 
@@ -84,6 +85,7 @@ const EMPTY_ENRICHMENT: TmdbEnrichment = {
   numberOfEpisodes: null,
   numberOfSeasons: null,
   allEpisodesAvailable: null,
+  airingSeasonNumber: null,
   ukCertification: null,
 };
 
@@ -129,6 +131,8 @@ export async function getTmdbEnrichment(
       numberOfEpisodes: type === "SERIES" ? details.number_of_episodes ?? null : null,
       numberOfSeasons: type === "SERIES" ? details.number_of_seasons ?? null : null,
       allEpisodesAvailable: type === "SERIES" ? details.next_episode_to_air == null : null,
+      airingSeasonNumber:
+        type === "SERIES" ? details.next_episode_to_air?.season_number ?? null : null,
       ukCertification: type === "MOVIE" ? ukCertificationFrom(details) : null,
     };
   } catch {

@@ -65,6 +65,20 @@ function displayName(user: User) {
   return user.displayName ?? user.email;
 }
 
+// When the series overall isn't fully out yet, but the season the person is
+// actually watching already is, say so instead of a blanket "Still airing".
+function availabilityLabel(item: ItemWithTitle): { available: boolean; label: string } {
+  if (item.allEpisodesAvail) return { available: true, label: "All available" };
+
+  const airingSeason = item.title.airingSeasonNumber;
+  if (airingSeason == null) return { available: false, label: "Still airing" };
+
+  if (item.currentSeason != null && item.currentSeason < airingSeason) {
+    return { available: true, label: `S${item.currentSeason} available` };
+  }
+  return { available: false, label: `S${airingSeason} airing` };
+}
+
 export function ListItemCard({
   item,
   canEdit,
@@ -91,6 +105,7 @@ export function ListItemCard({
     ? new Date(myReminder.remindAt).getTime() <= Date.now()
     : false;
   const showAddedBy = listType === "SHARED";
+  const availability = item.allEpisodesAvail !== null ? availabilityLabel(item) : null;
 
   function onStatusChange(status: WatchStatus) {
     startTransition(async () => {
@@ -269,16 +284,14 @@ export function ListItemCard({
           <span className={cn("size-2 rounded-full", STATUS_DOT[item.watchStatus])} />
           <span className="text-[10px] font-medium">{WATCH_STATUS_LABELS[item.watchStatus]}</span>
         </div>
-        {item.title.type === "SERIES" && item.allEpisodesAvail !== null && (
+        {item.title.type === "SERIES" && availability && (
           <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-background/80 px-1.5 py-0.5 backdrop-blur">
-            {item.allEpisodesAvail ? (
+            {availability.available ? (
               <CheckCircle2 className="size-3 text-emerald-500" />
             ) : (
               <Clock className="size-3 text-amber-500" />
             )}
-            <span className="text-[9px] font-medium">
-              {item.allEpisodesAvail ? "All available" : "Still airing"}
-            </span>
+            <span className="text-[9px] font-medium">{availability.label}</span>
           </div>
         )}
         {item.currentSeason && (

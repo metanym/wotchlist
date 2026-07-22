@@ -76,10 +76,18 @@ function textOrNull(value: string | undefined) {
   return value && value !== "N/A" ? value : null;
 }
 
+// OMDB occasionally has garbage data for this field (e.g. "1 min" for a
+// 45-minute drama) - anything under this is almost certainly wrong for a
+// feature film or TV episode, so treat it as missing and let the TMDB
+// fallback take over instead of trusting it.
+const MIN_PLAUSIBLE_RUNTIME_MINUTES = 5;
+
 function parseRuntimeMinutes(value: string | undefined): number | null {
   if (!value) return null;
   const match = value.match(/\d+/);
-  return match ? Number(match[0]) : null;
+  if (!match) return null;
+  const minutes = Number(match[0]);
+  return minutes >= MIN_PLAUSIBLE_RUNTIME_MINUTES ? minutes : null;
 }
 
 async function fetchSearchPage(query: string, page: number): Promise<OmdbSearchResponse> {

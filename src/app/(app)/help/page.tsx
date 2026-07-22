@@ -21,7 +21,7 @@ const sections = [
   {
     icon: Search,
     title: "Find and add something to watch",
-    body: "Use Search to look up a film or series. Ratings, seasons, and where it's streaming show right on the result. Tap a result to add it to one of your lists, choosing a streaming service, priority, and notes.",
+    body: "Use Search to look up a film or series. Ratings, seasons, episode length, and where it's streaming show right on the result — including which season's fully out if a show's still airing. Tap a result to add it to one of your lists, choosing a streaming service, priority, and notes.",
   },
   {
     icon: Info,
@@ -31,7 +31,7 @@ const sections = [
   {
     icon: SlidersHorizontal,
     title: "Filter and sort a list",
-    body: "Inside a list, tap Filters to narrow by status, streaming service, priority, type, or episode availability, and to change the sort order. Tap the grid/list icons to switch views — your choice is remembered.",
+    body: "Inside a list, tap Filters to narrow by status, streaming service, priority, type, or episode availability, and to choose what to sort by and in which direction. Watching items always show first, separated from the rest. Tap the grid/list icons to switch views — your choice is remembered.",
   },
   {
     icon: Archive,
@@ -51,12 +51,12 @@ const sections = [
   {
     icon: BellRing,
     title: "Set a reminder",
-    body: "Use the ⋮ menu on a card to set a personal reminder — to watch something on a date, or to check back on availability. For a still-airing series, we'll suggest an estimated date when all episodes should be out.",
+    body: "Use the ⋮ menu on a card to set a personal reminder — to watch something on a date, or to check back on availability. For a still-airing series, we'll suggest an estimated date when all episodes should be out. You'll get an email as well as an in-app notification when it's due.",
   },
   {
     icon: Bell,
     title: "Notifications",
-    body: "The bell icon shows you when someone adds something to a shared list, and when your reminders come due. Turn item-added alerts off any time in Settings.",
+    body: "The bell icon shows you any reminders you've got coming up, when someone adds something to a shared list, and when your reminders come due. Turn item-added alerts off any time in Settings.",
   },
 ];
 

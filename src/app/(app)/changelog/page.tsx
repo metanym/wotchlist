@@ -1,9 +1,25 @@
 const entries = [
   {
+    date: "16 July 2026",
+    items: [
+      "Search returns more results when there are lots of matches, instead of stopping at 10",
+      "Missing poster art now falls back to a second source, so more titles show real artwork",
+      "Episode length now shown for series too, not just movies",
+      "Still-airing shows now say which season you're caught up on vs. which one is airing, instead of one blanket \"still airing\" label",
+    ],
+  },
+  {
     date: "13 July 2026",
     items: [
       "Reminders now also send you an email on the date you set, not just an in-app notification",
       "Wotchlist now fills the screen on tablets and larger displays, with more titles per row",
+    ],
+  },
+  {
+    date: "11 July 2026",
+    items: [
+      "Reminders you've set now also show in the notifications bell, so you can see what's coming up, not just when it fires",
+      "Sort now has a direction — A–Z/Z–A, high to low/low to high, oldest/newest first — instead of one fixed order",
     ],
   },
   {

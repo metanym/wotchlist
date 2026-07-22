@@ -29,6 +29,7 @@ export interface OmdbSearchResult {
 interface OmdbSearchResponse {
   Response: "True" | "False";
   Error?: string;
+  totalResults?: string;
   Search?: Array<{
     Title: string;
     Year: string;
@@ -37,6 +38,9 @@ interface OmdbSearchResponse {
     Poster: string;
   }>;
 }
+
+const RESULTS_PER_PAGE = 10;
+const MAX_PAGES = 2;
 
 interface OmdbDetailResponse {
   Response: "True" | "False";
@@ -78,19 +82,39 @@ function parseRuntimeMinutes(value: string | undefined): number | null {
   return match ? Number(match[0]) : null;
 }
 
-export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
+async function fetchSearchPage(query: string, page: number): Promise<OmdbSearchResponse> {
   const url = new URL(OMDB_BASE_URL);
   url.searchParams.set("apikey", omdbApiKey());
   url.searchParams.set("s", query);
+  url.searchParams.set("page", String(page));
 
   const res = await fetch(url, { next: { revalidate: 0 } });
-  const data: OmdbSearchResponse = await res.json();
+  return res.json();
+}
 
-  if (data.Response === "False" || !data.Search) {
+export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
+  const firstPage = await fetchSearchPage(query, 1);
+
+  if (firstPage.Response === "False" || !firstPage.Search) {
     return [];
   }
 
-  const results = data.Search.map((item) => ({
+  const totalResults = Number(firstPage.totalResults ?? firstPage.Search.length);
+  const pagesAvailable = Math.min(MAX_PAGES, Math.ceil(totalResults / RESULTS_PER_PAGE));
+
+  const extraPages = await Promise.all(
+    Array.from({ length: pagesAvailable - 1 }, (_, i) => fetchSearchPage(query, i + 2))
+  );
+
+  const allItems = [firstPage, ...extraPages].flatMap((page) => page.Search ?? []);
+  const seen = new Set<string>();
+  const dedupedItems = allItems.filter((item) => {
+    if (seen.has(item.imdbID)) return false;
+    seen.add(item.imdbID);
+    return true;
+  });
+
+  const results = dedupedItems.map((item) => ({
     imdbId: item.imdbID,
     title: item.Title,
     year: item.Year,
@@ -108,6 +132,7 @@ export async function searchTitles(query: string): Promise<OmdbSearchResult[]> {
     const enrichment = enrichments[i];
     return {
       ...r,
+      posterUrl: r.posterUrl ?? enrichment.posterUrl,
       plot: detail ? textOrNull(detail.Plot) : null,
       genre: detail ? textOrNull(detail.Genre) : null,
       director: detail ? textOrNull(detail.Director) : null,
@@ -168,7 +193,7 @@ export async function upsertTitle(imdbId: string) {
     title: detail.Title,
     year: detail.Year,
     type,
-    posterUrl: textOrNull(detail.Poster),
+    posterUrl: textOrNull(detail.Poster) ?? enrichment.posterUrl,
     plot: textOrNull(detail.Plot),
     imdbRating: detail.imdbRating !== "N/A" ? detail.imdbRating : null,
     rtScore: rtScoreFrom(detail.Ratings),

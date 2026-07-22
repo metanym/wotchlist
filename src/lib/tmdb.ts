@@ -60,6 +60,7 @@ interface TmdbReleaseDateEntry {
 
 interface TmdbDetailsResponse {
   status?: string;
+  poster_path?: string | null;
   number_of_episodes?: number;
   number_of_seasons?: number;
   next_episode_to_air?: { season_number?: number } | null;
@@ -71,12 +72,15 @@ interface TmdbDetailsResponse {
   };
 }
 
+const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+
 export interface TmdbEnrichment {
   streamingServices: string[];
   numberOfEpisodes: number | null;
   numberOfSeasons: number | null;
   allEpisodesAvailable: boolean | null;
   airingSeasonNumber: number | null;
+  posterUrl: string | null;
   ukCertification: string | null;
 }
 
@@ -86,6 +90,7 @@ const EMPTY_ENRICHMENT: TmdbEnrichment = {
   numberOfSeasons: null,
   allEpisodesAvailable: null,
   airingSeasonNumber: null,
+  posterUrl: null,
   ukCertification: null,
 };
 
@@ -133,6 +138,7 @@ export async function getTmdbEnrichment(
       allEpisodesAvailable: type === "SERIES" ? details.next_episode_to_air == null : null,
       airingSeasonNumber:
         type === "SERIES" ? details.next_episode_to_air?.season_number ?? null : null,
+      posterUrl: details.poster_path ? `${TMDB_IMAGE_BASE_URL}${details.poster_path}` : null,
       ukCertification: type === "MOVIE" ? ukCertificationFrom(details) : null,
     };
   } catch {

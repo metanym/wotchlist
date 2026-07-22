@@ -172,9 +172,10 @@ export function SearchView() {
                       {result.totalEpisodes ? ` · ${result.totalEpisodes} Ep` : ""}
                     </Badge>
                   )}
-                  {result.type === "MOVIE" && result.runtimeMinutes && (
+                  {result.runtimeMinutes && (
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
                       {formatRuntime(result.runtimeMinutes)}
+                      {result.type === "SERIES" ? "/ep" : ""}
                     </Badge>
                   )}
                   {result.type === "MOVIE" && result.contentRating && (

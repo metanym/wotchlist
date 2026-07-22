@@ -64,6 +64,7 @@ interface TmdbDetailsResponse {
   number_of_episodes?: number;
   number_of_seasons?: number;
   next_episode_to_air?: { season_number?: number } | null;
+  last_episode_to_air?: { runtime?: number | null } | null;
   "watch/providers"?: {
     results?: Record<string, { flatrate?: TmdbProvider[]; ads?: TmdbProvider[]; free?: TmdbProvider[] }>;
   };
@@ -81,6 +82,7 @@ export interface TmdbEnrichment {
   allEpisodesAvailable: boolean | null;
   airingSeasonNumber: number | null;
   posterUrl: string | null;
+  episodeRuntimeMinutes: number | null;
   ukCertification: string | null;
 }
 
@@ -91,6 +93,7 @@ const EMPTY_ENRICHMENT: TmdbEnrichment = {
   allEpisodesAvailable: null,
   airingSeasonNumber: null,
   posterUrl: null,
+  episodeRuntimeMinutes: null,
   ukCertification: null,
 };
 
@@ -139,6 +142,7 @@ export async function getTmdbEnrichment(
       airingSeasonNumber:
         type === "SERIES" ? details.next_episode_to_air?.season_number ?? null : null,
       posterUrl: details.poster_path ? `${TMDB_IMAGE_BASE_URL}${details.poster_path}` : null,
+      episodeRuntimeMinutes: type === "SERIES" ? details.last_episode_to_air?.runtime ?? null : null,
       ukCertification: type === "MOVIE" ? ukCertificationFrom(details) : null,
     };
   } catch {

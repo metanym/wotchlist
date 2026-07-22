@@ -213,8 +213,8 @@ export function ListItemCard({
             {item.title.type === "SERIES" && item.title.totalEpisodes
               ? ` · ${item.title.totalEpisodes} Ep`
               : ""}
-            {item.title.type === "MOVIE" && item.title.runtimeMinutes
-              ? ` · ${formatRuntime(item.title.runtimeMinutes)}`
+            {item.title.runtimeMinutes
+              ? ` · ${formatRuntime(item.title.runtimeMinutes)}${item.title.type === "SERIES" ? "/ep" : ""}`
               : ""}
           </p>
           <div className="flex items-center gap-2">
@@ -350,9 +350,10 @@ export function ListItemCard({
               {item.title.totalEpisodes ? ` · ${item.title.totalEpisodes} Ep` : ""}
             </Badge>
           )}
-          {item.title.type === "MOVIE" && item.title.runtimeMinutes && (
+          {item.title.runtimeMinutes && (
             <Badge variant="outline" className="text-[10px]">
               {formatRuntime(item.title.runtimeMinutes)}
+              {item.title.type === "SERIES" ? "/ep" : ""}
             </Badge>
           )}
         </div>
